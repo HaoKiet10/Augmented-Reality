@@ -1,0 +1,79 @@
+// Prisma Schema for Augmented Reality Project
+// Models for Users, Projects, Assets, Triggers, and Configurations
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// User model for authentication
+model User {
+  id        String    @id @default(uuid())
+  email     String    @unique
+  password  String
+  name      String?
+  role      String    @default("designer") // designer, admin
+  avatarUrl String? // URL to profile picture in Supabase Storage
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  projects  Project[]
+  assets    Asset[]
+}
+
+// AR Project model
+model Project {
+  id            String    @id @default(uuid())
+  name          String
+  description   String?
+  status        String    @default("draft") // draft, published, archived
+  triggerImage  String? // URL to trigger image in Supabase Storage
+  overlayConfig Json? // AR overlay configuration (transform, animation, etc.)
+  publishedAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  designerId    String
+  designer      User      @relation(fields: [designerId], references: [id])
+  assets        Asset[]
+  triggers      Trigger[]
+}
+
+// Asset model for uploaded files (images, 3D models, etc.)
+model Asset {
+  id         String   @id @default(uuid())
+  filename   String
+  fileType   String // MIME type
+  fileSize   Int // Size in bytes
+  storageKey String // Supabase Storage key/path
+  url        String // Public URL from Supabase CDN
+  projectId  String
+  project    Project  @relation(fields: [projectId], references: [id])
+  uploadedBy String // User ID who uploaded
+  uploader   User     @relation(fields: [uploadedBy], references: [id])
+  createdAt  DateTime @default(now())
+}
+
+// Trigger Image model for AR recognition
+model Trigger {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  imageKey    String // Supabase Storage key
+  imageUrl    String // Public URL
+  projectId   String
+  createdAt   DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id])
+}
+
+// Configuration model for app-wide settings
+model Configuration {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  value       Json
+  description String?
+  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now())
+}
