@@ -5,8 +5,8 @@ import { Mail, Lock, Eye, EyeOff, LogIn } from 'lucide-react';
 import { z } from 'zod';
 
 const loginSchema = z.object({
-  email: z.string().min(1, 'Email is required').email('Invalid email address'),
-  password: z.string().min(1, 'Password is required'),
+  email: z.email('Invalid email address').nonempty('Email is required'),
+  password: z.string().nonempty('Password is required'),
 });
 
 export const Login: React.FC = () => {
@@ -35,7 +35,7 @@ export const Login: React.FC = () => {
     return true;
   };
 
-  const handleSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
@@ -59,11 +59,11 @@ export const Login: React.FC = () => {
       <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-600/20 rounded-full filter blur-[100px] animate-pulse delay-700"></div>
 
       {/* Glassmorphic Card */}
-      <div className="relative w-full max-w-md p-8 mx-4 bg-white/3 backdrop-blur-xl border border-white/8 rounded-2xl shadow-2xl transition-all duration-300 hover:border-white/15">
+      <div className="relative w-full max-w-md p-8 mx-4 bg-white/[0.03] backdrop-blur-xl border border-white/[0.08] rounded-2xl shadow-2xl transition-all duration-300 hover:border-white/[0.15]">
         
         {/* Title */}
         <div className="text-center mb-8">
-          <h2 className="text-3xl font-extrabold tracking-tight text-white bg-clip-text bg-linear-to-r from-blue-400 to-purple-400">
+          <h2 className="text-3xl font-extrabold tracking-tight text-white bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">
             Welcome Back
           </h2>
           <p className="mt-2 text-sm text-gray-400">
@@ -92,7 +92,7 @@ export const Login: React.FC = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className={`w-full pl-10 pr-4 py-3 bg-[#15171e] border ${
-                  validationError.email ? 'border-red-500/50' : 'border-white/8'
+                  validationError.email ? 'border-red-500/50' : 'border-white/[0.08]'
                 } text-white rounded-lg placeholder-gray-500 focus:outline-none focus:border-blue-500/80 focus:ring-1 focus:ring-blue-500/80 transition-all duration-200`}
                 placeholder="you@example.com"
               />
@@ -116,7 +116,7 @@ export const Login: React.FC = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className={`w-full pl-10 pr-10 py-3 bg-[#15171e] border ${
-                  validationError.password ? 'border-red-500/50' : 'border-white/8'
+                  validationError.password ? 'border-red-500/50' : 'border-white/[0.08]'
                 } text-white rounded-lg placeholder-gray-500 focus:outline-none focus:border-blue-500/80 focus:ring-1 focus:ring-blue-500/80 transition-all duration-200`}
                 placeholder="••••••••"
               />
@@ -137,7 +137,7 @@ export const Login: React.FC = () => {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="relative w-full flex items-center justify-center gap-2 py-3 px-4 bg-linear-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-semibold rounded-lg shadow-lg hover:shadow-blue-500/20 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none transition-all duration-200"
+            className="relative w-full flex items-center justify-center gap-2 py-3 px-4 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-semibold rounded-lg shadow-lg hover:shadow-blue-500/20 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none transition-all duration-200"
           >
             {isSubmitting ? (
               <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
