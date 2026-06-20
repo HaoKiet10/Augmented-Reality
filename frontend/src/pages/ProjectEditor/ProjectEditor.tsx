@@ -108,10 +108,12 @@ export const ProjectEditor: React.FC = () => {
 
                 <ArViewport
                     aframeLoaded={aframeLoaded}
-                    activeAsset={activeAsset}
-                    position={{ x: spatialConfig.posX, y: spatialConfig.posY, z: spatialConfig.posZ }}
-                    rotation={{ x: spatialConfig.rotX, y: spatialConfig.rotY, z: spatialConfig.rotZ }}
-                    scale={{ x: spatialConfig.scaleX, y: spatialConfig.scaleY, z: spatialConfig.scaleZ }}
+                    assets={assets}
+                    activeAssetId={activeAsset?.id ?? null}
+                    onSelectAsset={(assetId) => {
+                        const found = assets.find((a) => a.id === assetId);
+                        if (found) setActiveAsset(found);
+                    }}
                 />
 
                 <InspectorSidebar

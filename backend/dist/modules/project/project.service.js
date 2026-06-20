@@ -162,6 +162,39 @@ let ProjectService = class ProjectService {
             data: { transform: transform },
         });
     }
+    async setTriggerImage(projectId, designerId, file) {
+        const project = await this.findOne(projectId, designerId);
+        // Xóa trigger cũ nếu có
+        if (project.triggerImage) {
+            try {
+                await this.storageService.deleteFile(project.triggerImage);
+            }
+            catch (err) {
+                console.error('Failed to delete old trigger image:', err);
+            }
+        }
+        const { url, storageKey } = await this.storageService.uploadFile(file, projectId);
+        return this.prisma.project.update({
+            where: { id: projectId },
+            data: { triggerImage: storageKey },
+        });
+    }
+    async deleteTriggerImage(projectId, designerId) {
+        const project = await this.findOne(projectId, designerId);
+        if (!project.triggerImage) {
+            throw new common_1.NotFoundException('No trigger image to delete');
+        }
+        try {
+            await this.storageService.deleteFile(project.triggerImage);
+        }
+        catch (err) {
+            console.error('Failed to delete trigger image file:', err);
+        }
+        return this.prisma.project.update({
+            where: { id: projectId },
+            data: { triggerImage: null },
+        });
+    }
 };
 exports.ProjectService = ProjectService;
 exports.ProjectService = ProjectService = __decorate([
