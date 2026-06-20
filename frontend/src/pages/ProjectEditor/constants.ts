@@ -1,7 +1,5 @@
 export const API_URL = 'http://localhost:3000';
 
-export const AFRAME_SCRIPT_SRC = 'https://aframe.io/releases/1.6.0/aframe.min.js';
-
 /** Giới hạn dung lượng tổng cộng cho mỗi project (5 MB) */
 export const MAX_PROJECT_SIZE_MB = 5.0;
 export const MAX_PROJECT_SIZE_BYTES = MAX_PROJECT_SIZE_MB * 1024 * 1024;
