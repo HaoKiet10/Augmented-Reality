@@ -17,6 +17,7 @@ const common_1 = require("@nestjs/common");
 const auth_service_1 = require("./auth.service");
 const login_dto_1 = require("./dto/login.dto");
 const signup_dto_1 = require("./dto/signup.dto");
+const jwt_refresh_auth_guard_1 = require("./guards/jwt-refresh-auth.guard");
 let AuthController = class AuthController {
     constructor(authService) {
         this.authService = authService;
@@ -26,6 +27,12 @@ let AuthController = class AuthController {
     }
     async signup(signupDto) {
         return this.authService.signup(signupDto);
+    }
+    async refresh(req) {
+        const userId = req.user.sub;
+        const email = req.user.email;
+        const role = req.user.role;
+        return this.authService.refreshTokens(userId, email, role);
     }
     async logout() {
         return this.authService.logout();
@@ -49,6 +56,14 @@ __decorate([
     __metadata("design:paramtypes", [signup_dto_1.SignupDto]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "signup", null);
+__decorate([
+    (0, common_1.UseGuards)(jwt_refresh_auth_guard_1.JwtRefreshAuthGuard),
+    (0, common_1.Post)('refresh'),
+    __param(0, (0, common_1.Req)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "refresh", null);
 __decorate([
     (0, common_1.Post)('logout'),
     __metadata("design:type", Function),

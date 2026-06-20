@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { LogOut, LayoutDashboard, User as UserIcon, Plus, Folder, Calendar, Trash2, ExternalLink } from 'lucide-react';
 
@@ -12,7 +13,8 @@ interface Project {
 }
 
 export const Dashboard: React.FC = () => {
-  const { user, token, logout } = useAuth();
+  const { user, token, logout, authFetch } = useAuth();
+  const navigate = useNavigate();
   const [projects, setProjects] = useState<Project[]>([]);
   const [error, setError] = useState<string | null>(null);
 
@@ -22,11 +24,7 @@ export const Dashboard: React.FC = () => {
   const fetchProjects = async () => {
     if (!token) return;
     try {
-      const response = await fetch(`${API_URL}/projects`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
+      const response = await authFetch(`${API_URL}/projects`);
       if (!response.ok) {
         throw new Error('Failed to fetch projects');
       }
@@ -61,9 +59,9 @@ export const Dashboard: React.FC = () => {
       if (!response.ok) {
         throw new Error('Failed to create project');
       }
-
+      const data = await response.json();
       // Refresh list from database
-      await fetchProjects();
+      handleOpenProject(data.id)
     } catch (err: any) {
       console.error(err);
       setError(err.message || 'Failed to create new project.');
@@ -89,8 +87,7 @@ export const Dashboard: React.FC = () => {
         throw new Error('Failed to open project');
       }
 
-      // Refresh list to show re-sorted items
-      await fetchProjects();
+      navigate(`/project/${id}`);
     } catch (err: any) {
       console.error(err);
     }
@@ -99,6 +96,11 @@ export const Dashboard: React.FC = () => {
   // Delete a project from database
   const handleDeleteProject = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation(); // Avoid triggering open on click
+
+    if (!window.confirm('Are you sure you want to delete this project? All associated assets will be permanently removed.')) {
+      return;
+    }
+
     if (!token) return;
     try {
       const response = await fetch(`${API_URL}/projects/${id}`, {
@@ -164,6 +166,12 @@ export const Dashboard: React.FC = () => {
 
       {/* Main Content */}
       <main className="relative z-10 max-w-7xl mx-auto px-6 py-12">
+        {error && (
+          <div className="p-4 mb-6 bg-red-500/20 border border-red-500/30 text-red-200 rounded-xl text-sm flex justify-between items-center">
+            <span>{error}</span>
+            <button onClick={() => setError(null)} className="text-red-400 hover:text-red-200 font-bold ml-4">✕</button>
+          </div>
+        )}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
           <div>
             <h1 className="text-4xl font-extrabold tracking-tight bg-clip-text bg-linear-to-r from-white to-gray-400">
