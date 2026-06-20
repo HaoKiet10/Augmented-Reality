@@ -25,20 +25,19 @@ model User {
 
 // AR Project model
 model Project {
-  id            String    @id @default(uuid())
-  name          String    @default("Untitled")
-  description   String?
-  status        String    @default("draft") // draft, published, archived
-  triggerImage  String? // URL to trigger image in Supabase Storage
-  overlayConfig Json? // AR overlay configuration (transform, animation, etc.)
-  publishedAt   DateTime?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  lastOpenedAt  DateTime  @default(now())
-  designerId    String
-  designer      User      @relation(fields: [designerId], references: [id])
-  assets        Asset[]
-  triggers      Trigger[]
+  id           String    @id @default(uuid())
+  name         String    @default("Untitled")
+  description  String?
+  status       String    @default("draft") // draft, published, archived
+  triggerImage String? // URL to trigger image in Supabase Storage
+  publishedAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  lastOpenedAt DateTime  @default(now())
+  designerId   String
+  designer     User      @relation(fields: [designerId], references: [id])
+  assets       Asset[]
+  triggers     Trigger[]
 }
 
 // Asset model for uploaded files (images, 3D models, etc.)
@@ -49,6 +48,7 @@ model Asset {
   fileSize   Int // Size in bytes
   storageKey String // Supabase Storage key/path
   url        String // Public URL from Supabase CDN
+  transform  Json? // AR spatial transform for this asset: { position, rotation, scale }
   projectId  String
   project    Project  @relation(fields: [projectId], references: [id])
   uploadedBy String // User ID who uploaded

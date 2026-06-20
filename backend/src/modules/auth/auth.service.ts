@@ -46,6 +46,13 @@ export class AuthService {
     return { message: 'Logout successful' };
   }
 
+  async refreshTokens(userId: string, email: string, role: string) {
+    const payload = { sub: userId, email, role };
+    const token = this.jwtService.sign(payload);
+    const refreshToken = this.jwtService.sign(payload, { expiresIn: '7d' });
+    return { token, refreshToken };
+  }
+
   async forgotPassword() {
     // Implement forgot password logic here
   }
