@@ -28,6 +28,10 @@ export interface Project {
     name: string;
     description: string;
     status: ProjectStatus;
+    triggerImage: string | null;
+    triggerImageUrl: string | null;
+    createdAt: string;
+    lastOpenedAt: string;
 }
 
 export type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';

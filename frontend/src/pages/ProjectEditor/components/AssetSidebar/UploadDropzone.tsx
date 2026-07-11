@@ -3,7 +3,7 @@ import { ACCEPTED_FILE_EXTENSIONS } from '../../constants';
 
 interface UploadDropzoneProps {
     uploading: boolean;
-    fileInputRef: React.RefObject<HTMLInputElement>;
+    fileInputRef: React.RefObject<HTMLInputElement | null>;
     onFileUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }
 

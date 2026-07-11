@@ -30,12 +30,13 @@ model Project {
   description  String?
   status       String    @default("draft") // draft, published, archived
   triggerImage String? // URL to trigger image in Supabase Storage
+  triggerImageUrl String?
   publishedAt  DateTime?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
   lastOpenedAt DateTime  @default(now())
   designerId   String
-  designer     User      @relation(fields: [designerId], references: [id])
+  designer     User      @relation(fields: [designerId], references: [id], onDelete: Cascade)
   assets       Asset[]
   triggers     Trigger[]
 }
@@ -50,9 +51,9 @@ model Asset {
   url        String // Public URL from Supabase CDN
   transform  Json? // AR spatial transform for this asset: { position, rotation, scale }
   projectId  String
-  project    Project  @relation(fields: [projectId], references: [id])
+  project    Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
   uploadedBy String // User ID who uploaded
-  uploader   User     @relation(fields: [uploadedBy], references: [id])
+  uploader   User     @relation(fields: [uploadedBy], references: [id], onDelete: Cascade)
   createdAt  DateTime @default(now())
 }
 
@@ -66,7 +67,7 @@ model Trigger {
   projectId   String
   createdAt   DateTime @default(now())
 
-  project Project @relation(fields: [projectId], references: [id])
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 }
 
 // Configuration model for app-wide settings

@@ -15,7 +15,7 @@ interface UseAssetUploadParams {
 export function useAssetUpload({ id, totalSizeBytes, onUploaded, onError }: UseAssetUploadParams) {
     const { token, authFetch } = useAuth();
     const [uploading, setUploading] = useState(false);
-    const fileInputRef = useRef<HTMLInputElement>(null);
+    const fileInputRef = useRef<HTMLInputElement | null>(null);
 
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = e.target.files;

@@ -18,12 +18,6 @@ export class ProjectController {
     return this.projectService.findAll(req.user.id);
   }
 
-  // Define local asset serving endpoint WITHOUT JwtAuthGuard so A-Frame front-end can read it
-  @Get('uploads/:filename')
-  async serveLocalAsset(@Param('filename') filename: string, @Res() res: Response) {
-    const filePath = this.storageService.getLocalFilePath(filename);
-    return res.sendFile(filePath);
-  }
 
   @Get(':id')
   @UseGuards(JwtAuthGuard)
@@ -87,5 +81,25 @@ export class ProjectController {
     @Req() req: any
   ) {
     return this.projectService.updateAssetTransform(id, assetId, req.user.id, body);
+  }
+
+
+  // --- TRIGGER IMAGE ---
+
+  @Post(':id/trigger')
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(FileInterceptor('file'))
+  async setTriggerImage(
+    @Param('id') id: string,
+    @Req() req: any,
+    @UploadedFile() file: Express.Multer.File
+  ) {
+    return this.projectService.setTriggerImage(id, req.user.id, file);
+  }
+
+  @Delete(':id/trigger')
+  @UseGuards(JwtAuthGuard)
+  async deleteTriggerImage(@Param('id') id: string, @Req() req: any) {
+    return this.projectService.deleteTriggerImage(id, req.user.id);
   }
 }
