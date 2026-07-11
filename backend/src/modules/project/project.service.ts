@@ -89,6 +89,15 @@ export class ProjectService {
       }
     }
 
+    // Clean up trigger image if exists
+    if (project.triggerImage) {
+      try {
+        await this.storageService.deleteFile(project.triggerImage);
+      } catch (err) {
+        console.error(`Failed to delete project trigger image file:`, err);
+      }
+    }
+
     // Delete assets metadata
     await this.prisma.asset.deleteMany({
       where: { projectId: id },
@@ -201,6 +210,49 @@ export class ProjectService {
     return this.prisma.asset.update({
       where: { id: assetId },
       data: { transform: transform as any },
+    });
+  }
+  async setTriggerImage(projectId: string, designerId: string, file: Express.Multer.File) {
+    const project = await this.findOne(projectId, designerId);
+
+    if (project.triggerImage) {
+      try {
+        await this.storageService.deleteFile(project.triggerImage);
+      } catch (err) {
+        console.error('Failed to delete old trigger image:', err);
+      }
+    }
+
+    const { url, storageKey } = await this.storageService.uploadFile(file, projectId);
+
+    return this.prisma.project.update({
+      where: { id: projectId },
+      data: {
+        triggerImage: storageKey,
+        triggerImageUrl: url,
+      },
+    });
+  }
+
+  async deleteTriggerImage(projectId: string, designerId: string) {
+    const project = await this.findOne(projectId, designerId);
+
+    if (!project.triggerImage) {
+      throw new NotFoundException('No trigger image to delete');
+    }
+
+    try {
+      await this.storageService.deleteFile(project.triggerImage);
+    } catch (err) {
+      console.error('Failed to delete trigger image file:', err);
+    }
+
+    return this.prisma.project.update({
+      where: { id: projectId },
+      data: {
+        triggerImage: null,
+        triggerImageUrl: null,
+      },
     });
   }
 }

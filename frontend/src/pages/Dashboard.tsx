@@ -2,15 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { LogOut, LayoutDashboard, User as UserIcon, Plus, Folder, Calendar, Trash2, ExternalLink } from 'lucide-react';
+import type { Project } from '../pages/ProjectEditor/types';
 
-interface Project {
-  id: string;
-  name: string;
-  description: string;
-  status: 'draft' | 'published' | 'archived';
-  createdAt: string;
-  lastOpenedAt: string;
-}
 
 export const Dashboard: React.FC = () => {
   const { user, token, logout, authFetch } = useAuth();
@@ -235,47 +228,62 @@ export const Dashboard: React.FC = () => {
                 <div
                   key={project.id}
                   onClick={() => handleOpenProject(project.id)}
-                  className="group relative flex flex-col justify-between p-6 bg-white/2 backdrop-blur-lg border border-white/6 rounded-2xl hover:border-purple-500/40 hover:bg-white/4 transition-all duration-300 cursor-pointer hover:shadow-xl hover:shadow-purple-500/5"
+                  className="group relative flex flex-col justify-between bg-white/2 backdrop-blur-lg border border-white/6 rounded-2xl hover:border-purple-500/40 hover:bg-white/4 transition-all duration-300 cursor-pointer hover:shadow-xl hover:shadow-purple-500/5 overflow-hidden"
                 >
-                  <div>
-                    {/* Header line with badge and delete */}
-                    <div className="flex items-center justify-between mb-4">
-                      <span className="px-2 py-0.5 text-xs font-semibold bg-purple-500/20 text-purple-300 border border-purple-500/30 rounded-full capitalize">
-                        {project.status}
-                      </span>
-                      <button
-                        onClick={(e) => handleDeleteProject(project.id, e)}
-                        className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all duration-200"
-                        title="Delete project"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-
-                    <h3 className="text-lg font-bold text-white mb-2 group-hover:text-purple-300 transition-colors duration-200">
-                      {project.name}
-                    </h3>
-                    <p className="text-gray-400 text-sm mb-6 line-clamp-2">
-                      {project.description}
-                    </p>
+                  {/* Trigger image thumbnail */}
+                  <div className="relative h-36 bg-white/3 border-b border-white/6 flex items-center justify-center overflow-hidden">
+                    {project.triggerImageUrl ? (
+                      <img
+                        src={project.triggerImageUrl}
+                        alt="Trigger"
+                        className="w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all duration-500"
+                      />
+                    ) : (
+                      <div className="flex flex-col items-center gap-2 text-gray-600">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                          <rect x="3" y="3" width="18" height="18" rx="2" strokeDasharray="4 2" />
+                          <circle cx="8.5" cy="8.5" r="1.5" />
+                          <path d="M21 15l-5-5L5 21" />
+                        </svg>
+                        <span className="text-xs">No trigger image</span>
+                      </div>
+                    )}
+                    {/* Status badge overlay */}
+                    <span className="absolute top-2 left-2 px-2 py-0.5 text-xs font-semibold bg-black/60 backdrop-blur-sm text-purple-300 border border-purple-500/30 rounded-full capitalize">
+                      {project.status}
+                    </span>
                   </div>
 
-                  {/* Footer metadata */}
-                  <div className="flex items-center justify-between pt-4 border-t border-white/5 text-xs text-gray-400">
-                    <div className="flex items-center gap-1.5">
-                      <Calendar size={13} className="text-blue-400" />
-                      <span>
-                        Opened {new Date(project.lastOpenedAt).toLocaleDateString(undefined, {
-                          month: 'short',
-                          day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}
-                      </span>
+                  {/* Card body */}
+                  <div className="flex flex-col flex-1 p-5">
+                    <div className="flex items-start justify-between mb-2">
+                      <h3 className="text-base font-bold text-white group-hover:text-purple-300 transition-colors duration-200 leading-snug">
+                        {project.name}
+                      </h3>
+                      <button
+                        onClick={(e) => handleDeleteProject(project.id, e)}
+                        className="ml-2 shrink-0 p-1.5 text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all duration-200"
+                        title="Delete project"
+                      >
+                        <Trash2 size={15} />
+                      </button>
                     </div>
-                    <div className="flex items-center gap-1 text-blue-400 group-hover:translate-x-0.5 transition-transform duration-200">
-                      <span className="font-semibold">Open</span>
-                      <ExternalLink size={12} />
+                    <p className="text-gray-400 text-sm mb-4 line-clamp-2">{project.description}</p>
+
+                    <div className="mt-auto flex items-center justify-between pt-4 border-t border-white/5 text-xs text-gray-400">
+                      <div className="flex items-center gap-1.5">
+                        <Calendar size={13} className="text-blue-400" />
+                        <span>
+                          {new Date(project.lastOpenedAt).toLocaleDateString(undefined, {
+                            month: 'short', day: 'numeric',
+                            hour: '2-digit', minute: '2-digit'
+                          })}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1 text-blue-400 group-hover:translate-x-0.5 transition-transform duration-200">
+                        <span className="font-semibold">Open</span>
+                        <ExternalLink size={12} />
+                      </div>
                     </div>
                   </div>
                 </div>

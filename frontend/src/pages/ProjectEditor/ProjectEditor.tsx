@@ -19,7 +19,7 @@ import './aframe.d.ts';
 export const ProjectEditor: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
-    useAuth();
+    const { authFetch } = useAuth();
 
     const aframeLoaded = useAframeScript();
 
@@ -31,6 +31,29 @@ export const ProjectEditor: React.FC = () => {
         error, setError,
         updateAssetTransform,
     } = useProjectData(id);
+
+    const API_URL = 'http://localhost:3000';
+    const handleUploadTrigger = async (file: File) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        const res = await authFetch(`${API_URL}/projects/${id}/trigger`, {
+            method: 'POST',
+            body: formData,
+        });
+        if (res.ok) {
+            const updated = await res.json();
+            setProject(updated);
+        }
+    };
+
+    const handleDeleteTrigger = async () => {
+        const res = await authFetch(`${API_URL}/projects/${id}/trigger`, {
+            method: 'DELETE',
+        });
+        if (res.ok) {
+            setProject((prev) => prev ? { ...prev, triggerImageUrl: null } : prev);
+        }
+    };
 
     const spatialConfig = useAssetTransform({
         activeAsset,
@@ -104,6 +127,9 @@ export const ProjectEditor: React.FC = () => {
                     onFileUpload={handleFileUpload}
                     onSelectAsset={setActiveAsset}
                     onDeleteAsset={handleDeleteAsset}
+                    triggerImageUrl={project?.triggerImageUrl ?? null}
+                    onUploadTrigger={handleUploadTrigger}
+                    onDeleteTrigger={handleDeleteTrigger}
                 />
 
                 <ArViewport
