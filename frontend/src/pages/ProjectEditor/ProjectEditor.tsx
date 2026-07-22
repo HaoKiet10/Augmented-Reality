@@ -14,6 +14,7 @@ import { AssetSidebar } from './components/AssetSidebar/AssetSidebar';
 import { ArViewport } from './components/ArViewport/ArViewport';
 import { InspectorSidebar } from './components/InspectorSidebar/InspectorSidebar';
 
+import { DEFAULT_SPATIAL_CONFIG } from './constants';
 import './aframe.d.ts';
 
 export const ProjectEditor: React.FC = () => {
@@ -139,6 +140,15 @@ export const ProjectEditor: React.FC = () => {
                     onSelectAsset={(assetId) => {
                         const found = assets.find((a) => a.id === assetId);
                         if (found) setActiveAsset(found);
+                    }}
+                    onDragAsset={(assetId, position) => {
+                        const found = assets.find((a) => a.id === assetId);
+                        if (!found) return;
+                        const currentTransform = found.transform ?? DEFAULT_SPATIAL_CONFIG;
+                        updateAssetTransform(assetId, {
+                            ...currentTransform,
+                            position,
+                        });
                     }}
                 />
 
