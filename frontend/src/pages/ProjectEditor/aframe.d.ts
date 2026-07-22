@@ -1,3 +1,5 @@
+import 'react';
+
 // Mở rộng JSX namespace của React để hỗ trợ các custom element của A-Frame.
 // Cần thiết vì A-Frame không có type definitions chính thức cho JSX/TSX.
 declare module 'react' {
@@ -15,5 +17,3 @@ declare module 'react' {
         }
     }
 }
-
-export { };

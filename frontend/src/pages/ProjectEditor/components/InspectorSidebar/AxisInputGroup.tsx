@@ -6,13 +6,14 @@ interface AxisInputGroupProps {
 }
 
 export function AxisInputGroup({ label, value, onChange, step }: AxisInputGroupProps) {
+    const roundedValue = Math.round(value * 100) / 100;
     return (
         <div className="bg-white/2 border border-white/5 rounded-lg px-2.5 py-1.5">
             <label className="text-[10px] text-gray-500 block">{label}</label>
             <input
                 type="number"
                 step={step}
-                value={value}
+                value={roundedValue}
                 onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
                 className="w-full bg-transparent border-0 text-white font-mono text-sm focus:outline-hidden mt-0.5"
             />
@@ -29,7 +30,7 @@ interface AxisSliderProps {
     max: number;
     /** Hậu tố hiển thị cạnh giá trị, ví dụ "m", "°", "x" */
     unit?: string;
-    /** Số chữ số thập phân hiển thị giá trị (mặc định: không format) */
+    /** Số chữ số thập phân hiển thị giá trị (mặc định: 2) */
     displayFractionDigits?: number;
 }
 
@@ -41,10 +42,9 @@ export function AxisSlider({
     min,
     max,
     unit = '',
-    displayFractionDigits,
+    displayFractionDigits = 2,
 }: AxisSliderProps) {
-    const displayValue =
-        displayFractionDigits !== undefined ? value.toFixed(displayFractionDigits) : value;
+    const displayValue = value.toFixed(displayFractionDigits);
 
     return (
         <div className="flex flex-col gap-1">

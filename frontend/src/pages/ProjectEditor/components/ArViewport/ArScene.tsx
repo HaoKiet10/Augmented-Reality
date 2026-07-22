@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Entity, Scene } from 'aframe-react';
 import type { Asset } from '../../types';
 import { isImageAsset, isVideoAsset } from '../../utils/assetType';
@@ -7,6 +8,7 @@ interface ArSceneProps {
     assets: Asset[];
     activeAssetId: string | null;
     onSelectAsset: (assetId: string) => void;
+    onDragAsset: (assetId: string, position: { x: number; y: number; z: number }) => void;
 }
 
 function vectorToString(v: { x: number; y: number; z: number }) {
@@ -17,23 +19,40 @@ function AssetEntity({
     asset,
     isSelected,
     onSelect,
+    onDragPosition,
+    onDragStart,
+    onDragEnd,
+    isDragging,
 }: {
     asset: Asset;
     isSelected: boolean;
     onSelect: () => void;
+    onDragPosition: (position: { x: number; y: number; z: number }) => void;
+    onDragStart: () => void;
+    onDragEnd: () => void;
+    isDragging: boolean;
 }) {
     const isVideo = isVideoAsset(asset.fileType, asset.filename);
     const isImage = isImageAsset(asset.fileType, asset.filename);
     const transform = asset.transform ?? DEFAULT_SPATIAL_CONFIG;
     const videoElId = `ar-video-src-${asset.id}`;
 
+    const entityProps: any = {
+        position: vectorToString(transform.position),
+        rotation: vectorToString(transform.rotation),
+        scale: vectorToString(transform.scale),
+        'draggable-object': '',
+        events: {
+            click: onSelect,
+            dragstart: onDragStart,
+            dragposition: (e: any) => onDragPosition(e.detail),
+            dragend: onDragEnd,
+        }
+    };
+
+
     return (
-        <Entity
-            position={vectorToString(transform.position)}
-            rotation={vectorToString(transform.rotation)}
-            scale={vectorToString(transform.scale)}
-            events={{ click: onSelect }}
-        >
+        <Entity {...entityProps}>
             {isVideo && (
                 <Entity primitive="a-video" src={`#${videoElId}`} width="1.6" height="0.9" material="side: double" />
             )}
@@ -53,8 +72,9 @@ function AssetEntity({
     );
 }
 
-export function ArScene({ assets, activeAssetId, onSelectAsset }: ArSceneProps) {
+export function ArScene({ assets, activeAssetId, onSelectAsset, onDragAsset }: ArSceneProps) {
     const videoAssets = assets.filter((a) => isVideoAsset(a.fileType, a.filename));
+    const [draggingId, setDraggingId] = useState<string | null>(null);
 
     return (
         <Scene embedded className="w-full h-full" vr-mode-ui="enabled: false" cursor="rayOrigin: mouse">
@@ -90,6 +110,10 @@ export function ArScene({ assets, activeAssetId, onSelectAsset }: ArSceneProps) 
                     asset={asset}
                     isSelected={asset.id === activeAssetId}
                     onSelect={() => onSelectAsset(asset.id)}
+                    onDragPosition={(pos) => onDragAsset(asset.id, pos)}
+                    onDragStart={() => setDraggingId(asset.id)}
+                    onDragEnd={() => setDraggingId(null)}
+                    isDragging={asset.id === draggingId}
                 />
             ))}
 
@@ -99,7 +123,13 @@ export function ArScene({ assets, activeAssetId, onSelectAsset }: ArSceneProps) 
             </Entity>
 
             {/* Camera controls */}
-            <Entity primitive="a-camera" position="0 1.6 0" look-controls="enabled: true" wasd-controls="enabled: true" />
+            <Entity
+                primitive="a-camera"
+                position="0 1.6 0"
+                look-controls="enabled: true"
+                wasd-controls="enabled: true; fly: true"
+                vertical-controls="speed: 0.08"
+            />
         </Scene>
     );
 }

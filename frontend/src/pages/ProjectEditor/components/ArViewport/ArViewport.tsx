@@ -8,9 +8,10 @@ interface ArViewportProps {
     assets: Asset[];
     activeAssetId: string | null;
     onSelectAsset: (assetId: string) => void;
+    onDragAsset: (assetId: string, position: { x: number; y: number; z: number }) => void;
 }
 
-export function ArViewport({ aframeLoaded, assets, activeAssetId, onSelectAsset }: ArViewportProps) {
+export function ArViewport({ aframeLoaded, assets, activeAssetId, onSelectAsset, onDragAsset }: ArViewportProps) {
     const activeAsset = assets.find((a) => a.id === activeAssetId) ?? null;
 
     return (
@@ -33,7 +34,12 @@ export function ArViewport({ aframeLoaded, assets, activeAssetId, onSelectAsset 
                 </div>
             ) : (
                 <div className="absolute inset-0 w-full h-full">
-                    <ArScene assets={assets} activeAssetId={activeAssetId} onSelectAsset={onSelectAsset} />
+                    <ArScene
+                        assets={assets}
+                        activeAssetId={activeAssetId}
+                        onSelectAsset={onSelectAsset}
+                        onDragAsset={onDragAsset}
+                    />
                     {activeAsset && <ArStatusBadge activeAsset={activeAsset} />}
                 </div>
             )}
