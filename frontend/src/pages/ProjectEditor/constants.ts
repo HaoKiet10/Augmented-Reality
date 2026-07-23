@@ -1,4 +1,4 @@
-export const API_URL = 'http://localhost:3000';
+export { API_URL } from '../../config';
 
 /** Giới hạn dung lượng tổng cộng cho mỗi project (5 MB) */
 export const MAX_PROJECT_SIZE_MB = 5.0;

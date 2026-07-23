@@ -1,5 +1,6 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { API_URL } from '../../config';
 
 import { useAframeScript } from './hooks/useAframeScript';
 import { useProjectData } from './hooks/useProjectData';
@@ -33,8 +34,7 @@ export const ProjectEditor: React.FC = () => {
         updateAssetTransform,
     } = useProjectData(id);
 
-    const API_URL = 'http://localhost:3000';
-    const handleUploadTrigger = async (file: File) => {
+        const handleUploadTrigger = async (file: File) => {
         const formData = new FormData();
         formData.append('file', file);
         const res = await authFetch(`${API_URL}/projects/${id}/trigger`, {
@@ -148,6 +148,24 @@ export const ProjectEditor: React.FC = () => {
                         updateAssetTransform(assetId, {
                             ...currentTransform,
                             position,
+                        });
+                    }}
+                    onRotateAsset={(assetId, rotation) => {
+                        const found = assets.find((a) => a.id === assetId);
+                        if (!found) return;
+                        const currentTransform = found.transform ?? DEFAULT_SPATIAL_CONFIG;
+                        updateAssetTransform(assetId, {
+                            ...currentTransform,
+                            rotation,
+                        });
+                    }}
+                    onScaleAsset={(assetId, scale) => {
+                        const found = assets.find((a) => a.id === assetId);
+                        if (!found) return;
+                        const currentTransform = found.transform ?? DEFAULT_SPATIAL_CONFIG;
+                        updateAssetTransform(assetId, {
+                            ...currentTransform,
+                            scale,
                         });
                     }}
                 />

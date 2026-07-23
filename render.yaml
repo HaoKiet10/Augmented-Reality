@@ -1,0 +1,25 @@
+# Import file này trên Render: New -> Blueprint -> chọn repo này.
+# Sau khi import, vào phần Environment của service để điền các giá trị
+# SUPABASE_URL / SUPABASE_ANON_KEY / SUPABASE_SERVICE_ROLE_KEY / JWT_SECRET / DIRECT_URL
+# (lấy từ Supabase project của bạn, mục Project Settings -> API và Database).
+
+services:
+  - type: web
+    name: ar-backend
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: .
+    plan: free
+    envVars:
+      - key: PORT
+        value: 3000
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: DIRECT_URL
+        sync: false

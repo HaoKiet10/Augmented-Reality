@@ -9,6 +9,8 @@ interface ArSceneProps {
     activeAssetId: string | null;
     onSelectAsset: (assetId: string) => void;
     onDragAsset: (assetId: string, position: { x: number; y: number; z: number }) => void;
+    onRotateAsset: (assetId: string, rotation: { x: number; y: number; z: number }) => void;
+    onScaleAsset: (assetId: string, scale: { x: number; y: number; z: number }) => void;
 }
 
 function vectorToString(v: { x: number; y: number; z: number }) {
@@ -23,6 +25,8 @@ function AssetEntity({
     onDragStart,
     onDragEnd,
     isDragging,
+    onRotate,
+    onScale,
 }: {
     asset: Asset;
     isSelected: boolean;
@@ -31,6 +35,8 @@ function AssetEntity({
     onDragStart: () => void;
     onDragEnd: () => void;
     isDragging: boolean;
+    onRotate: (rotation: { x: number; y: number; z: number }) => void;
+    onScale: (scale: { x: number; y: number; z: number }) => void;
 }) {
     const isVideo = isVideoAsset(asset.fileType, asset.filename);
     const isImage = isImageAsset(asset.fileType, asset.filename);
@@ -47,6 +53,8 @@ function AssetEntity({
             dragstart: onDragStart,
             dragposition: (e: any) => onDragPosition(e.detail),
             dragend: onDragEnd,
+            rotateangle: (e: any) => onRotate(e.detail),
+            scalevalue: (e: any) => onScale(e.detail),
         }
     };
 
@@ -62,17 +70,29 @@ function AssetEntity({
             {!isVideo && !isImage && <Entity primitive="a-gltf-model" src={asset.url} />}
 
             {isSelected && (
-                <Entity
-                    geometry="primitive: ring; radiusInner: 0.85; radiusOuter: 0.9"
-                    material="color: #3b82f6; shader: flat; side: double"
-                    position="0 0 0.01"
-                />
+                <>
+                    {/* Vòng tròn nằm ngang quanh model — vừa là chỉ báo đang chọn, vừa là handle
+                        kéo để xoay quanh trục Y (kéo dọc theo vòng tròn theo chiều mong muốn). */}
+                    <Entity
+                        rotate-handle=""
+                        geometry="primitive: ring; radiusInner: 0.85; radiusOuter: 0.95"
+                        material={`color: ${isDragging ? '#f59e0b' : '#3b82f6'}; shader: flat; side: double; opacity: 0.85; transparent: true`}
+                        rotation="-90 0 0"
+                    />
+                    {/* Chấm nhỏ ở rìa vòng tròn — kéo ra xa/gần tâm để scale đều 3 trục. */}
+                    <Entity
+                        scale-handle=""
+                        geometry="primitive: sphere; radius: 0.06"
+                        material="color: #22c55e; shader: flat"
+                        position="0.95 0 0"
+                    />
+                </>
             )}
         </Entity>
     );
 }
 
-export function ArScene({ assets, activeAssetId, onSelectAsset, onDragAsset }: ArSceneProps) {
+export function ArScene({ assets, activeAssetId, onSelectAsset, onDragAsset, onRotateAsset, onScaleAsset }: ArSceneProps) {
     const videoAssets = assets.filter((a) => isVideoAsset(a.fileType, a.filename));
     const [draggingId, setDraggingId] = useState<string | null>(null);
 
@@ -114,6 +134,8 @@ export function ArScene({ assets, activeAssetId, onSelectAsset, onDragAsset }: A
                     onDragStart={() => setDraggingId(asset.id)}
                     onDragEnd={() => setDraggingId(null)}
                     isDragging={asset.id === draggingId}
+                    onRotate={(rotation) => onRotateAsset(asset.id, rotation)}
+                    onScale={(scale) => onScaleAsset(asset.id, scale)}
                 />
             ))}
 

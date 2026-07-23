@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { LogOut, LayoutDashboard, User as UserIcon, Plus, Folder, Calendar, Trash2, ExternalLink } from 'lucide-react';
 import type { Project } from '../pages/ProjectEditor/types';
+import { API_URL } from '../config';
 
 
 export const Dashboard: React.FC = () => {
@@ -10,8 +11,6 @@ export const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   const [projects, setProjects] = useState<Project[]>([]);
   const [error, setError] = useState<string | null>(null);
-
-  const API_URL = 'http://localhost:3000';
 
   // Fetch all projects from database
   const fetchProjects = async () => {
