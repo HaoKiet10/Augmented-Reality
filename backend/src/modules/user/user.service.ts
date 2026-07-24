@@ -59,4 +59,11 @@ export class UserService {
             where: { email },
         });
     }
+
+    /** Bỏ field password (hash) trước khi trả user object ra response — không bao giờ
+     * để password (dù đã hash) lọt ra ngoài API response hay bị lưu ở localStorage phía client. */
+    sanitize<T extends { password?: string }>(user: T): Omit<T, 'password'> {
+        const { password, ...rest } = user;
+        return rest;
+    }
 }

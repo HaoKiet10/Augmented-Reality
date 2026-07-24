@@ -22,7 +22,7 @@ export class AuthService {
     const payload = { sub: user.id, email: user.email, role: user.role };
     const token = this.jwtService.sign(payload);
     const refreshToken = this.jwtService.sign(payload, { expiresIn: '7d' });
-    return { message: 'Login successful', user, token, refreshToken };
+    return { message: 'Login successful', user: this.userService.sanitize(user), token, refreshToken };
   }
 
   async signup(signupDto: SignupDto) {
@@ -39,7 +39,7 @@ export class AuthService {
     const payload = { sub: user.id, email: user.email, role: user.role };
     const token = this.jwtService.sign(payload);
     const refreshToken = this.jwtService.sign(payload, { expiresIn: '7d' });
-    return { message: 'Signup successful', user, token, refreshToken };
+    return { message: 'Signup successful', user: this.userService.sanitize(user), token, refreshToken };
   }
 
   async logout() {
