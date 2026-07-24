@@ -1,6 +1,7 @@
 import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import * as path from 'path';
+import WebSocket from 'ws';
 
 @Injectable()
 export class StorageService {
@@ -16,6 +17,12 @@ export class StorageService {
         this.supabase = createClient(supabaseUrl, supabaseKey, {
           auth: {
             persistSession: false,
+          },
+          // Node < 22 chưa có global WebSocket, mà supabase-js khởi tạo Realtime client
+          // ngay khi createClient() chạy -> phải tự cấp transport qua package `ws`,
+          // nếu không constructor sẽ throw và toàn bộ Storage bị vô hiệu (this.supabase = null).
+          realtime: {
+            transport: WebSocket as any,
           },
         });
         this.logger.log('Supabase Storage client initialized successfully.');
