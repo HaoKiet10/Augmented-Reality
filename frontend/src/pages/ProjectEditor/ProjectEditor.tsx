@@ -100,7 +100,7 @@ export const ProjectEditor: React.FC = () => {
     }
 
     return (
-        <div className="relative min-h-screen bg-[#0d0e12] flex flex-col text-white font-sans overflow-hidden">
+        <div className="relative h-screen bg-[#0d0e12] flex flex-col text-white font-sans overflow-hidden">
             <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-500/5 rounded-full filter blur-[120px] pointer-events-none"></div>
 
             <EditorHeader
