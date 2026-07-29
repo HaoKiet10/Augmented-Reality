@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, memo } from 'react';
 import { Entity, Scene } from 'aframe-react';
 import type { Asset } from '../../types';
 import { isImageAsset, isVideoAsset } from '../../utils/assetType';
@@ -16,6 +16,23 @@ interface ArSceneProps {
 function vectorToString(v: { x: number; y: number; z: number }) {
     return `${v.x} ${v.y} ${v.z}`;
 }
+
+/**
+ * Camera tách riêng + bọc memo: component này KHÔNG nhận prop nào thay đổi theo asset,
+ * nên React sẽ bỏ qua re-render nó khi ArScene re-render (do kéo/xoay/scale asset khác).
+ * Nếu không tách, aframe-react sẽ gọi lại setAttribute('position', '0 1.6 0') mỗi lần
+ * ArScene render lại — xoá sạch vị trí camera đã bay tới bằng WASD (free-fly-controls).
+ */
+const CameraRig = memo(function CameraRig() {
+    return (
+        <Entity
+            primitive="a-camera"
+            position="0 1.6 0"
+            look-controls="enabled: true"
+            free-fly-controls="speed: 0.08"
+        />
+    );
+});
 
 function AssetEntity({
     asset,
@@ -145,13 +162,7 @@ export function ArScene({ assets, activeAssetId, onSelectAsset, onDragAsset, onR
             </Entity>
 
             {/* Camera controls */}
-            <Entity
-                primitive="a-camera"
-                position="0 1.6 0"
-                look-controls="enabled: true"
-                wasd-controls="enabled: true; fly: true"
-                vertical-controls="speed: 0.08"
-            />
+            <CameraRig />
         </Scene>
     );
 }

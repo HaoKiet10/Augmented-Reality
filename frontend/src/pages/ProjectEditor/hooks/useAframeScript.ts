@@ -36,7 +36,6 @@ export function useAframeScript(): boolean {
                             if (!camera) return;
 
                             const originalEvent = evt.detail.mouseEvent || evt.detail.touchEvent || evt;
-
                             // Get plane normal facing the camera
                             const cameraDirection = new THREE.Vector3();
                             camera.getWorldDirection(cameraDirection);
@@ -71,9 +70,10 @@ export function useAframeScript(): boolean {
                             const cameraEl = camera.el;
                             if (cameraEl && cameraEl.components['look-controls']) {
                                 cameraEl.setAttribute('look-controls', 'enabled', false);
+                                cameraEl.setAttribute('free-fly-controls', 'enabled', false);
                             }
 
-                            if (originalEvent.stopPropagation) originalEvent.stopPropagation();
+                            evt.stopPropagation();
 
                             // Offset between object position and mouse intersection point
                             this.offset.copy(objectPosition).sub(this.intersection);
@@ -127,6 +127,7 @@ export function useAframeScript(): boolean {
                                 const cameraEl = camera?.el;
                                 if (cameraEl && cameraEl.components['look-controls']) {
                                     cameraEl.setAttribute('look-controls', 'enabled', true);
+                                    cameraEl.setAttribute('free-fly-controls', 'enabled', true);
                                 }
 
                                 window.removeEventListener('mousemove', this.onMouseMove);
@@ -169,7 +170,7 @@ export function useAframeScript(): boolean {
                             const originalEvent = evt.detail.mouseEvent || evt.detail.touchEvent || evt;
                             // Chặn nổi bọt lên entity cha — nếu không, `draggable-object` của entity cha
                             // cũng nhận được cùng sự kiện mousedown này và kéo-di-chuyển luôn cùng lúc.
-                            if (originalEvent.stopPropagation) originalEvent.stopPropagation();
+                            evt.stopPropagation();
 
                             const camera = this.el.sceneEl.camera;
                             const parentEl = this.el.parentEl;
@@ -186,6 +187,7 @@ export function useAframeScript(): boolean {
                             const cameraEl = camera.el;
                             if (cameraEl && cameraEl.components['look-controls']) {
                                 cameraEl.setAttribute('look-controls', 'enabled', false);
+                                cameraEl.setAttribute('free-fly-controls', 'enabled', false);
                             }
 
                             this.startAngle = Math.atan2(clientY - center.y, clientX - center.x);
@@ -227,6 +229,7 @@ export function useAframeScript(): boolean {
                             const cameraEl = camera && camera.el;
                             if (cameraEl && cameraEl.components['look-controls']) {
                                 cameraEl.setAttribute('look-controls', 'enabled', true);
+                                cameraEl.setAttribute('free-fly-controls', 'enabled', true);
                             }
 
                             window.removeEventListener('mousemove', this.onMouseMove);
@@ -264,7 +267,7 @@ export function useAframeScript(): boolean {
                         },
                         onMouseDown: function (this: any, evt: any) {
                             const originalEvent = evt.detail.mouseEvent || evt.detail.touchEvent || evt;
-                            if (originalEvent.stopPropagation) originalEvent.stopPropagation();
+                            evt.stopPropagation();
 
                             const camera = this.el.sceneEl.camera;
                             const parentEl = this.el.parentEl;
@@ -284,6 +287,7 @@ export function useAframeScript(): boolean {
                             const cameraEl = camera.el;
                             if (cameraEl && cameraEl.components['look-controls']) {
                                 cameraEl.setAttribute('look-controls', 'enabled', false);
+                                cameraEl.setAttribute('free-fly-controls', 'enabled', false);
                             }
 
                             this.startDistance = dist;
@@ -327,6 +331,7 @@ export function useAframeScript(): boolean {
                             const cameraEl = camera && camera.el;
                             if (cameraEl && cameraEl.components['look-controls']) {
                                 cameraEl.setAttribute('look-controls', 'enabled', true);
+                                cameraEl.setAttribute('free-fly-controls', 'enabled', true);
                             }
 
                             window.removeEventListener('mousemove', this.onMouseMove);
@@ -344,15 +349,20 @@ export function useAframeScript(): boolean {
                     });
                 }
 
-                if (!AFRAME.components['vertical-controls']) {
-                    AFRAME.registerComponent('vertical-controls', {
+                if (!AFRAME.components['free-fly-controls']) {
+                    AFRAME.registerComponent('free-fly-controls', {
                         schema: {
-                            speed: { type: 'number', default: 0.1 }
+                            speed: { type: 'number', default: 0.1 },
+                            enabled: { type: 'boolean', default: true }
                         },
                         init: function (this: any) {
                             this.keys = {};
                             this.onKeyDown = this.onKeyDown.bind(this);
                             this.onKeyUp = this.onKeyUp.bind(this);
+                            // Tự lắng nghe trên window (không dùng wasd-controls / shouldCaptureKeyEvent
+                            // có sẵn của A-Frame) — component built-in của A-Frame chỉ nhận phím khi
+                            // document.activeElement === document.body, nên chỉ cần bấm 1 nút/input bất kỳ
+                            // trên trang (sidebar, header...) là WASD im re cho tới khi focus quay lại body.
                             window.addEventListener('keydown', this.onKeyDown);
                             window.addEventListener('keyup', this.onKeyUp);
                         },
@@ -363,20 +373,47 @@ export function useAframeScript(): boolean {
                             this.keys[e.key.toLowerCase()] = false;
                         },
                         tick: function (this: any, _time: number, timeDelta: number) {
+                            if (!this.data.enabled) return;
                             const speed = this.data.speed * (timeDelta / 16.6);
                             const position = this.el.getAttribute('position');
                             if (!position) return;
 
-                            // Space or E to go up
-                            if (this.keys[' '] || this.keys['e']) {
-                                position.y += speed;
-                                this.el.setAttribute('position', position);
+                            let moved = false;
+
+                            // Space/E lên, Shift/Q xuống — theo trục Y thế giới
+                            if (this.keys[' '] || this.keys['e']) { position.y += speed; moved = true; }
+                            if (this.keys['shift'] || this.keys['q']) { position.y -= speed; moved = true; }
+
+                            // W/A/S/D (hoặc phím mũi tên) — bay theo hướng camera đang nhìn (fly 3D đầy đủ)
+                            const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(this.el.object3D.quaternion);
+                            const right = new THREE.Vector3(1, 0, 0).applyQuaternion(this.el.object3D.quaternion);
+
+                            if (this.keys['w'] || this.keys['arrowup']) {
+                                position.x += forward.x * speed;
+                                position.y += forward.y * speed;
+                                position.z += forward.z * speed;
+                                moved = true;
                             }
-                            // Shift or Q to go down
-                            if (this.keys['shift'] || this.keys['q']) {
-                                position.y -= speed;
-                                this.el.setAttribute('position', position);
+                            if (this.keys['s'] || this.keys['arrowdown']) {
+                                position.x -= forward.x * speed;
+                                position.y -= forward.y * speed;
+                                position.z -= forward.z * speed;
+                                moved = true;
                             }
+                            if (this.keys['a'] || this.keys['arrowleft']) {
+                                position.x -= right.x * speed;
+                                position.y -= right.y * speed;
+                                position.z -= right.z * speed;
+                                moved = true;
+                            }
+                            if (this.keys['d'] || this.keys['arrowright']) {
+                                position.x += right.x * speed;
+                                position.y += right.y * speed;
+                                position.z += right.z * speed;
+                                moved = true;
+                            }
+
+                            if (moved) this.el.setAttribute('position', position);
                         },
                         remove: function (this: any) {
                             window.removeEventListener('keydown', this.onKeyDown);
