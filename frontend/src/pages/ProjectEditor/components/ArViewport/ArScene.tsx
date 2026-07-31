@@ -9,7 +9,6 @@ interface ArSceneProps {
     activeAssetId: string | null;
     onSelectAsset: (assetId: string) => void;
     onDragAsset: (assetId: string, position: { x: number; y: number; z: number }) => void;
-    onRotateAsset: (assetId: string, rotation: { x: number; y: number; z: number }) => void;
     onScaleAsset: (assetId: string, scale: { x: number; y: number; z: number }) => void;
 }
 
@@ -19,7 +18,7 @@ function vectorToString(v: { x: number; y: number; z: number }) {
 
 /**
  * Camera tách riêng + bọc memo: component này KHÔNG nhận prop nào thay đổi theo asset,
- * nên React sẽ bỏ qua re-render nó khi ArScene re-render (do kéo/xoay/scale asset khác).
+ * nên React sẽ bỏ qua re-render nó khi ArScene re-render (do kéo/scale asset khác).
  * Nếu không tách, aframe-react sẽ gọi lại setAttribute('position', '0 1.6 0') mỗi lần
  * ArScene render lại — xoá sạch vị trí camera đã bay tới bằng WASD (free-fly-controls).
  */
@@ -42,7 +41,6 @@ function AssetEntity({
     onDragStart,
     onDragEnd,
     isDragging,
-    onRotate,
     onScale,
 }: {
     asset: Asset;
@@ -52,7 +50,6 @@ function AssetEntity({
     onDragStart: () => void;
     onDragEnd: () => void;
     isDragging: boolean;
-    onRotate: (rotation: { x: number; y: number; z: number }) => void;
     onScale: (scale: { x: number; y: number; z: number }) => void;
 }) {
     const isVideo = isVideoAsset(asset.fileType, asset.filename);
@@ -70,11 +67,9 @@ function AssetEntity({
             dragstart: onDragStart,
             dragposition: (e: any) => onDragPosition(e.detail),
             dragend: onDragEnd,
-            rotateangle: (e: any) => onRotate(e.detail),
             scalevalue: (e: any) => onScale(e.detail),
         }
     };
-
 
     return (
         <Entity {...entityProps}>
@@ -88,20 +83,19 @@ function AssetEntity({
 
             {isSelected && (
                 <>
-                    {/* Vòng tròn nằm ngang quanh model — vừa là chỉ báo đang chọn, vừa là handle
-                        kéo để xoay quanh trục Y (kéo dọc theo vòng tròn theo chiều mong muốn). */}
+                    {/* Vòng tròn chỉ báo đang chọn (không dùng để kéo xoay nữa — xoay dùng
+                        ô số bên Inspector sidebar cho cả 3 trục, chính xác và gọn hơn). */}
                     <Entity
-                        rotate-handle=""
-                        geometry="primitive: ring; radiusInner: 0.85; radiusOuter: 0.95"
-                        material={`color: ${isDragging ? '#f59e0b' : '#3b82f6'}; shader: flat; side: double; opacity: 0.85; transparent: true`}
+                        geometry="primitive: ring; radiusInner: 0.85; radiusOuter: 0.9"
+                        material={`color: ${isDragging ? '#f59e0b' : '#3b82f6'}; shader: flat; side: double`}
                         rotation="-90 0 0"
                     />
-                    {/* Chấm nhỏ ở rìa vòng tròn — kéo ra xa/gần tâm để scale đều 3 trục. */}
+                    {/* Chấm nhỏ ở rìa — kéo ra xa/gần tâm để scale đều 3 trục. */}
                     <Entity
                         scale-handle=""
                         geometry="primitive: sphere; radius: 0.06"
-                        material="color: #22c55e; shader: flat"
-                        position="0.95 0 0"
+                        material="color: #fbbf24; shader: flat"
+                        position="0.9 0 0"
                     />
                 </>
             )}
@@ -109,7 +103,7 @@ function AssetEntity({
     );
 }
 
-export function ArScene({ assets, activeAssetId, onSelectAsset, onDragAsset, onRotateAsset, onScaleAsset }: ArSceneProps) {
+export function ArScene({ assets, activeAssetId, onSelectAsset, onDragAsset, onScaleAsset }: ArSceneProps) {
     const videoAssets = assets.filter((a) => isVideoAsset(a.fileType, a.filename));
     const [draggingId, setDraggingId] = useState<string | null>(null);
 
@@ -151,7 +145,6 @@ export function ArScene({ assets, activeAssetId, onSelectAsset, onDragAsset, onR
                     onDragStart={() => setDraggingId(asset.id)}
                     onDragEnd={() => setDraggingId(null)}
                     isDragging={asset.id === draggingId}
-                    onRotate={(rotation) => onRotateAsset(asset.id, rotation)}
                     onScale={(scale) => onScaleAsset(asset.id, scale)}
                 />
             ))}
