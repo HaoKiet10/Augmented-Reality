@@ -64,7 +64,15 @@ function AssetEntity({
         'draggable-object': '',
         events: {
             click: onSelect,
-            dragstart: onDragStart,
+            dragstart: () => {
+                // Chọn asset ngay khi bắt đầu kéo, không chờ sự kiện 'click' lúc buông chuột —
+                // A-Frame chỉ bắn 'click' nếu entity bị raycaster trỏ tới lúc buông TRÙNG với
+                // lúc nhấn; khi kéo, model giữ nguyên độ lệch so với điểm nắm ban đầu nên con trỏ
+                // rất dễ không còn nằm đúng trên model lúc buông tay -> 'click' không bắn -> asset
+                // không được chọn, vòng tròn bị "kẹt" ở asset đã chọn trước đó.
+                onSelect();
+                onDragStart();
+            },
             dragposition: (e: any) => onDragPosition(e.detail),
             dragend: onDragEnd,
             scalevalue: (e: any) => onScale(e.detail),
