@@ -1,9 +1,11 @@
-import { Controller, Get, Post, Patch, Delete, Param, Body, UseGuards, Req, UseInterceptors, UploadedFile, Res } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Param, Body, UseGuards, Req, UseInterceptors, UploadedFile } from '@nestjs/common';
 import { ProjectService } from './project.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { Response } from 'express';
 import { StorageService } from './storage.service';
+import { CreateProjectDto } from './dto/create-project.dto';
+import { UpdateProjectDto } from './dto/update-project.dto';
+import { UpdateAssetTransformDto } from './dto/update-asset-transform.dto';
 
 @Controller('projects')
 export class ProjectController {
@@ -27,13 +29,13 @@ export class ProjectController {
 
   @Post()
   @UseGuards(JwtAuthGuard)
-  async create(@Body() body: { name: string }, @Req() req: any) {
+  async create(@Body() body: CreateProjectDto, @Req() req: any) {
     return this.projectService.create(req.user.id, body.name);
   }
 
   @Patch(':id')
   @UseGuards(JwtAuthGuard)
-  async update(@Param('id') id: string, @Body() body: any, @Req() req: any) {
+  async update(@Param('id') id: string, @Body() body: UpdateProjectDto, @Req() req: any) {
     return this.projectService.update(id, req.user.id, body);
   }
 
@@ -77,7 +79,7 @@ export class ProjectController {
   async updateAssetTransform(
     @Param('id') id: string,
     @Param('assetId') assetId: string,
-    @Body() body: { position: { x: number; y: number; z: number }; rotation: { x: number; y: number; z: number }; scale: { x: number; y: number; z: number } },
+    @Body() body: UpdateAssetTransformDto,
     @Req() req: any
   ) {
     return this.projectService.updateAssetTransform(id, assetId, req.user.id, body);

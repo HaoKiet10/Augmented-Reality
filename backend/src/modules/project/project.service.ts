@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from './storage.service';
+import { UpdateProjectDto } from './dto/update-project.dto';
 
 const MAX_LIMIT = 5 * 1024 * 1024; // 5MB in bytes
 
@@ -68,7 +69,7 @@ export class ProjectService {
     });
   }
 
-  async update(id: string, designerId: string, data: { name?: string; status?: string; description?: string; lastOpenedAt?: Date | string }) {
+  async update(id: string, designerId: string, data: UpdateProjectDto) {
     await this.findOne(id, designerId);
 
     return this.prisma.project.update({
