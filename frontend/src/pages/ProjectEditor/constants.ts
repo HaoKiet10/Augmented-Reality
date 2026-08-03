@@ -6,7 +6,7 @@ export const MAX_PROJECT_SIZE_BYTES = MAX_PROJECT_SIZE_MB * 1024 * 1024;
 
 export const MODEL_EXTENSIONS = ['.glb', '.gltf'] as const;
 export const VIDEO_EXTENSIONS = ['.mp4', '.webm'] as const;
-export const IMAGE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.svg'] as const;
+export const IMAGE_EXTENSIONS = ['.png', '.jpg', '.jpeg'] as const;
 
 /** Dùng cho thuộc tính `accept` của input file */
 export const ACCEPTED_FILE_EXTENSIONS = [

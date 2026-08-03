@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from './storage.service';
 import { UpdateProjectDto } from './dto/update-project.dto';
+import { validateUploadedFile, ALLOWED_ASSET_TYPES, ALLOWED_TRIGGER_IMAGE_TYPES } from './asset-validation';
 
 const MAX_LIMIT = 5 * 1024 * 1024; // 5MB in bytes
 
@@ -122,6 +123,10 @@ export class ProjectService {
   async addAsset(projectId: string, designerId: string, file: Express.Multer.File) {
     await this.findOne(projectId, designerId); // Verify access
 
+    // Kiểm tra nội dung file THẬT (magic bytes) — không tin đuôi file/mimetype
+    // client tự khai báo, vì fileFilter ở multer chỉ chặn được lớp ngoài dễ giả mạo.
+    validateUploadedFile(file, ALLOWED_ASSET_TYPES);
+
     // 1. Calculate current project size
     const assets = await this.prisma.asset.findMany({
       where: { projectId },
@@ -215,6 +220,8 @@ export class ProjectService {
   }
   async setTriggerImage(projectId: string, designerId: string, file: Express.Multer.File) {
     const project = await this.findOne(projectId, designerId);
+
+    validateUploadedFile(file, ALLOWED_TRIGGER_IMAGE_TYPES);
 
     if (project.triggerImage) {
       try {

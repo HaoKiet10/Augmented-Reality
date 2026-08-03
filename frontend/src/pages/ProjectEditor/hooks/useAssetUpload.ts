@@ -24,7 +24,7 @@ export function useAssetUpload({ id, totalSizeBytes, onUploaded, onError }: UseA
         const file = files[0];
 
         if (!isSupportedUploadFile(file.name)) {
-            alert('Invalid file format. Supported formats: 3D Models (.glb, .gltf), Videos (.mp4, .webm), and Images (.png, .jpg, .jpeg, .svg).');
+            alert('Invalid file format. Supported formats: 3D Models (.glb, .gltf), Videos (.mp4, .webm), and Images (.png, .jpg, .jpeg).');
             return;
         }
 
