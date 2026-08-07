@@ -1,4 +1,5 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { UserService } from '../user/user.service';
 import { LoginDto } from './dto/login.dto';
 import { SignupDto } from './dto/signup.dto';
@@ -9,7 +10,26 @@ export class AuthService {
   constructor(
     private readonly userService: UserService,
     private jwtService: JwtService,
+    private configService: ConfigService,
   ) { }
+
+  private signTokens(userId: string, email: string, role?: string) {
+    const basePayload = { sub: userId, email, role };
+
+    const token = this.jwtService.sign(
+      { ...basePayload, type: 'access' },
+      { expiresIn: '1d' },
+    );
+    const refreshToken = this.jwtService.sign(
+      { ...basePayload, type: 'refresh' },
+      {
+        secret: this.configService.getOrThrow<string>('JWT_REFRESH_SECRET'),
+        expiresIn: '7d',
+      },
+    );
+
+    return { token, refreshToken };
+  }
 
   async login(loginDto: LoginDto) {
     const user = await this.userService.validate(
@@ -19,9 +39,7 @@ export class AuthService {
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
     }
-    const payload = { sub: user.id, email: user.email, role: user.role };
-    const token = this.jwtService.sign(payload);
-    const refreshToken = this.jwtService.sign(payload, { expiresIn: '7d' });
+    const { token, refreshToken } = this.signTokens(user.id, user.email, user.role);
     return { message: 'Login successful', user: this.userService.sanitize(user), token, refreshToken };
   }
 
@@ -36,9 +54,7 @@ export class AuthService {
       password: signupDto.password,
       name: signupDto.name,
     });
-    const payload = { sub: user.id, email: user.email, role: user.role };
-    const token = this.jwtService.sign(payload);
-    const refreshToken = this.jwtService.sign(payload, { expiresIn: '7d' });
+    const { token, refreshToken } = this.signTokens(user.id, user.email, user.role);
     return { message: 'Signup successful', user: this.userService.sanitize(user), token, refreshToken };
   }
 
@@ -47,14 +63,10 @@ export class AuthService {
   }
 
   async refreshTokens(userId: string, email: string, role: string) {
-    const payload = { sub: userId, email, role };
-    const token = this.jwtService.sign(payload);
-    const refreshToken = this.jwtService.sign(payload, { expiresIn: '7d' });
-    return { token, refreshToken };
+    return this.signTokens(userId, email, role);
   }
 
   async forgotPassword() {
     // Implement forgot password logic here
   }
 }
-

@@ -8,6 +8,7 @@ export interface JwtPayload {
   sub: string;       // user id
   email: string;
   role?: string;
+  type: 'access' | 'refresh';
   iat?: number;
   exp?: number;
 }
@@ -25,6 +26,10 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   async validate(payload: JwtPayload) {
     if (!payload.sub) {
       throw new UnauthorizedException('Invalid token payload');
+    }
+
+    if (payload.type !== 'access') {
+      throw new UnauthorizedException('Invalid token type');
     }
 
     return {

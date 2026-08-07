@@ -12,7 +12,7 @@ export class RefreshTokenStrategy extends PassportStrategy(Strategy, 'jwt-refres
         super({
             jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
             ignoreExpiration: false,
-            secretOrKey: configService.getOrThrow<string>('JWT_SECRET'),
+            secretOrKey: configService.getOrThrow<string>('JWT_REFRESH_SECRET'),
             passReqToCallback: true,
         });
     }
@@ -22,6 +22,10 @@ export class RefreshTokenStrategy extends PassportStrategy(Strategy, 'jwt-refres
 
         if (!refreshToken) {
             throw new UnauthorizedException('Refresh token not found');
+        }
+
+        if (payload.type !== 'refresh') {
+            throw new UnauthorizedException('Invalid token type');
         }
 
         return { ...payload, refreshToken };
