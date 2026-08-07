@@ -4,7 +4,26 @@ import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  app.enableCors();
+
+  // CORS_ORIGIN: danh sách domain frontend được phép, phân tách bằng dấu phẩy.
+  // Set trên Render (backend) trỏ tới domain Vercel/Netlify của frontend.
+  const configuredOrigins = (process.env.CORS_ORIGIN ?? '')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
+  const defaultOrigins = [
+    'http://localhost:5173', // Vite dev server
+    'https://augmented-reality-frontend.vercel.app',
+  ];
+
+  const allowedOrigins = configuredOrigins.length > 0 ? configuredOrigins : defaultOrigins;
+
+  app.enableCors({
+    origin: allowedOrigins,
+    credentials: true,
+  });
+
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true, // tự động BỎ mọi field không khai báo trong DTO
