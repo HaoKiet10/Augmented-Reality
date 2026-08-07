@@ -70,7 +70,6 @@ export function useAframeScript(): boolean {
                             const cameraEl = camera.el;
                             if (cameraEl && cameraEl.components['look-controls']) {
                                 cameraEl.setAttribute('look-controls', 'enabled', false);
-                                cameraEl.setAttribute('free-fly-controls', 'enabled', false);
                             }
 
                             evt.stopPropagation();
@@ -88,6 +87,20 @@ export function useAframeScript(): boolean {
 
                             const camera = this.el.sceneEl.camera;
                             if (!camera) return;
+
+                            // Tính lại mặt phẳng kéo mỗi lần rê chuột, bám theo vị trí HIỆN TẠI của
+                            // object và hướng camera HIỆN TẠI — thay vì giữ nguyên từ lúc mousedown.
+                            // Vì chỉ tính lại khi có sự kiện 'mousemove' THẬT (không chạy theo tick mỗi
+                            // frame), nên lúc chỉ bay (WASD) mà không đụng chuột thì hoàn toàn không có
+                            // gì được tính lại -> object đứng yên tuyệt đối, không bị trôi theo camera.
+                            // Đánh đổi: nếu bay xa rồi mới rê chuột, object có thể "nhảy" một cái tới
+                            // đúng điểm chiếu mới của con trỏ (chấp nhận được, ưu tiên không bị trôi).
+                            const currentObjectPos = new THREE.Vector3();
+                            this.el.object3D.getWorldPosition(currentObjectPos);
+                            const cameraDirection = new THREE.Vector3();
+                            camera.getWorldDirection(cameraDirection);
+                            const planeNormal = cameraDirection.clone().negate();
+                            this.plane.setFromNormalAndCoplanarPoint(planeNormal, currentObjectPos);
 
                             const clientX = evt.touches ? evt.touches[0].clientX : evt.clientX;
                             const clientY = evt.touches ? evt.touches[0].clientY : evt.clientY;
@@ -127,7 +140,6 @@ export function useAframeScript(): boolean {
                                 const cameraEl = camera?.el;
                                 if (cameraEl && cameraEl.components['look-controls']) {
                                     cameraEl.setAttribute('look-controls', 'enabled', true);
-                                    cameraEl.setAttribute('free-fly-controls', 'enabled', true);
                                 }
 
                                 window.removeEventListener('mousemove', this.onMouseMove);
@@ -186,7 +198,6 @@ export function useAframeScript(): boolean {
                             const cameraEl = camera.el;
                             if (cameraEl && cameraEl.components['look-controls']) {
                                 cameraEl.setAttribute('look-controls', 'enabled', false);
-                                cameraEl.setAttribute('free-fly-controls', 'enabled', false);
                             }
 
                             this.startDistance = dist;
@@ -230,7 +241,6 @@ export function useAframeScript(): boolean {
                             const cameraEl = camera && camera.el;
                             if (cameraEl && cameraEl.components['look-controls']) {
                                 cameraEl.setAttribute('look-controls', 'enabled', true);
-                                cameraEl.setAttribute('free-fly-controls', 'enabled', true);
                             }
 
                             window.removeEventListener('mousemove', this.onMouseMove);
@@ -258,18 +268,28 @@ export function useAframeScript(): boolean {
                             this.keys = {};
                             this.onKeyDown = this.onKeyDown.bind(this);
                             this.onKeyUp = this.onKeyUp.bind(this);
+                            this.onBlur = this.onBlur.bind(this);
                             // Tự lắng nghe trên window (không dùng wasd-controls / shouldCaptureKeyEvent
                             // có sẵn của A-Frame) — component built-in của A-Frame chỉ nhận phím khi
                             // document.activeElement === document.body, nên chỉ cần bấm 1 nút/input bất kỳ
                             // trên trang (sidebar, header...) là WASD im re cho tới khi focus quay lại body.
                             window.addEventListener('keydown', this.onKeyDown);
                             window.addEventListener('keyup', this.onKeyUp);
+                            // Khi trang mất focus (Ctrl+P, alt+tab, mở dialog khác...), phím đang giữ
+                            // rất hay KHÔNG bắn được sự kiện keyup (trình duyệt/OS giữ luôn sự kiện đó) —
+                            // nếu không reset thì this.keys[phím đó] mắc kẹt ở true mãi mãi, camera cứ
+                            // bay tới hoài dù tay đã buông phím từ lâu. Reset sạch mỗi khi mất focus.
+                            window.addEventListener('blur', this.onBlur);
+                            document.addEventListener('visibilitychange', this.onBlur);
                         },
                         onKeyDown: function (this: any, e: KeyboardEvent) {
                             this.keys[e.key.toLowerCase()] = true;
                         },
                         onKeyUp: function (this: any, e: KeyboardEvent) {
                             this.keys[e.key.toLowerCase()] = false;
+                        },
+                        onBlur: function (this: any) {
+                            this.keys = {};
                         },
                         tick: function (this: any, _time: number, timeDelta: number) {
                             if (!this.data.enabled) return;
@@ -317,6 +337,8 @@ export function useAframeScript(): boolean {
                         remove: function (this: any) {
                             window.removeEventListener('keydown', this.onKeyDown);
                             window.removeEventListener('keyup', this.onKeyUp);
+                            window.removeEventListener('blur', this.onBlur);
+                            document.removeEventListener('visibilitychange', this.onBlur);
                         }
                     });
                 }
