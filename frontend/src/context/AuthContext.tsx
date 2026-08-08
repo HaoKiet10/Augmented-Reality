@@ -11,7 +11,6 @@ export interface User {
 interface AuthContextType {
   user: User | null;
   token: string | null;
-  refreshToken: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
@@ -25,26 +24,26 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
-  const [refreshToken, setRefreshToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
+  // The refresh token now lives only in a backend-set HttpOnly cookie — it is never
+  // readable from JS, so it can't be exfiltrated via XSS the way a localStorage value can.
   const logout = () => {
     localStorage.removeItem('token');
-    localStorage.removeItem('refreshToken');
     localStorage.removeItem('user');
     setToken(null);
-    setRefreshToken(null);
     setUser(null);
+    fetch(`${API_URL}/auth/logout`, { method: 'POST', credentials: 'include' }).catch(() => {
+      // best-effort — cookie is cleared client-side by the response regardless
+    });
   };
 
   useEffect(() => {
     const savedToken = localStorage.getItem('token');
-    const savedRefreshToken = localStorage.getItem('refreshToken');
     const savedUser = localStorage.getItem('user');
 
     if (savedToken && savedUser) {
       setToken(savedToken);
-      setRefreshToken(savedRefreshToken);
       setUser(JSON.parse(savedUser));
     }
     setIsLoading(false);
@@ -56,6 +55,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       headers: {
         'Content-Type': 'application/json',
       },
+      credentials: 'include', // let the browser store the HttpOnly refresh_token cookie
       body: JSON.stringify({ email, password }),
     });
 
@@ -66,11 +66,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     localStorage.setItem('token', data.token);
-    localStorage.setItem('refreshToken', data.refreshToken);
     localStorage.setItem('user', JSON.stringify(data.user));
 
     setToken(data.token);
-    setRefreshToken(data.refreshToken);
     setUser(data.user);
   };
 
@@ -80,6 +78,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       headers: {
         'Content-Type': 'application/json',
       },
+      credentials: 'include',
       body: JSON.stringify({ name, email, password }),
     });
 
@@ -90,18 +89,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     localStorage.setItem('token', data.token);
-    localStorage.setItem('refreshToken', data.refreshToken);
     localStorage.setItem('user', JSON.stringify(data.user));
 
     setToken(data.token);
-    setRefreshToken(data.refreshToken);
     setUser(data.user);
   };
 
   const authFetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
     let currentToken = token || localStorage.getItem('token');
     const headers = new Headers(init?.headers || {});
-    
+
     if (currentToken && !headers.has('Authorization')) {
       headers.set('Authorization', `Bearer ${currentToken}`);
     }
@@ -114,40 +111,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     let response = await fetch(input, modifiedInit);
 
     if (response.status === 401) {
-      const currentRefreshToken = refreshToken || localStorage.getItem('refreshToken');
-      if (currentRefreshToken) {
-        try {
-          const refreshResponse = await fetch(`${API_URL}/auth/refresh`, {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${currentRefreshToken}`,
-            },
+      try {
+        // No token in the request body/headers — the browser sends the HttpOnly
+        // refresh_token cookie automatically.
+        const refreshResponse = await fetch(`${API_URL}/auth/refresh`, {
+          method: 'POST',
+          credentials: 'include',
+        });
+
+        if (refreshResponse.ok) {
+          const refreshData = await refreshResponse.json();
+
+          localStorage.setItem('token', refreshData.token);
+          setToken(refreshData.token);
+
+          const retryHeaders = new Headers(init?.headers || {});
+          retryHeaders.set('Authorization', `Bearer ${refreshData.token}`);
+
+          response = await fetch(input, {
+            ...init,
+            headers: retryHeaders,
           });
-
-          if (refreshResponse.ok) {
-            const refreshData = await refreshResponse.json();
-            
-            localStorage.setItem('token', refreshData.token);
-            localStorage.setItem('refreshToken', refreshData.refreshToken);
-            
-            setToken(refreshData.token);
-            setRefreshToken(refreshData.refreshToken);
-
-            const retryHeaders = new Headers(init?.headers || {});
-            retryHeaders.set('Authorization', `Bearer ${refreshData.token}`);
-            
-            response = await fetch(input, {
-              ...init,
-              headers: retryHeaders,
-            });
-          } else {
-            logout();
-          }
-        } catch (err) {
-          console.error('Silent token refresh failed:', err);
+        } else {
           logout();
         }
-      } else {
+      } catch (err) {
+        console.error('Silent token refresh failed:', err);
         logout();
       }
     }
@@ -160,7 +149,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       value={{
         user,
         token,
-        refreshToken,
         isAuthenticated: !!token,
         isLoading,
         login,

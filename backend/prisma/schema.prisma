@@ -21,6 +21,21 @@ model User {
   updatedAt DateTime  @updatedAt
   projects  Project[]
   assets    Asset[]
+  refreshTokens RefreshToken[]
+}
+
+// Refresh token records — enables rotation on use and revocation (e.g. on logout,
+// reuse detection, or password change), instead of trusting the JWT alone.
+model RefreshToken {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String   @unique // sha256 of the raw refresh token — never store raw tokens
+  revoked   Boolean  @default(false)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
 }
 
 // AR Project model

@@ -13,8 +13,8 @@ export class JwtRefreshAuthGuard extends AuthGuard('jwt-refresh') {
 
         if (can) {
             const request = context.switchToHttp().getRequest();
-            if (!request.user || !request.user.role) {
-                request.user = { role: 'user' };
+            if (request.user && !request.user.role) {
+                request.user.role = 'user';
             }
         }
         return can;
