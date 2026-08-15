@@ -2,11 +2,10 @@ import { Controller, Get, Post, Patch, Delete, Param, Body, UseGuards, Req, UseI
 import { ProjectService } from './project.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { StorageService } from './storage.service';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
-import { UpdateAssetTransformDto } from './dto/update-asset-transform.dto';
-import { ALLOWED_ASSET_TYPES, ALLOWED_TRIGGER_IMAGE_TYPES } from './asset-validation';
+import { SetTriggerDimensionsDto } from './dto/set-trigger-dimensions.dto';
+import { ALLOWED_TRIGGER_IMAGE_TYPES } from './asset-validation';
 
 /** multer fileFilter: chặn SỚM theo tên/mimetype trước khi buffer cả file vào RAM.
  * Đây chỉ là lớp lọc rẻ tiền đầu tiên — kiểm tra nội dung thật (magic bytes) nằm
@@ -27,17 +26,13 @@ const MAX_UPLOAD_BYTES = 5 * 1024 * 1024; // khớp giới hạn tổng/project 
 
 @Controller('projects')
 export class ProjectController {
-  constructor(
-    private readonly projectService: ProjectService,
-    private readonly storageService: StorageService
-  ) { }
+  constructor(private readonly projectService: ProjectService) { }
 
   @Get()
   @UseGuards(JwtAuthGuard)
   async findAll(@Req() req: any) {
     return this.projectService.findAll(req.user.id);
   }
-
 
   @Get(':id')
   @UseGuards(JwtAuthGuard)
@@ -63,50 +58,6 @@ export class ProjectController {
     return this.projectService.delete(id, req.user.id);
   }
 
-  // --- ASSET ENDPOINTS ---
-
-  @Get(':id/assets')
-  @UseGuards(JwtAuthGuard)
-  async getAssets(@Param('id') id: string, @Req() req: any) {
-    return this.projectService.getAssets(id, req.user.id);
-  }
-
-  @Post(':id/assets')
-  @UseGuards(JwtAuthGuard)
-  @UseInterceptors(FileInterceptor('file', {
-    fileFilter: makeFileFilter(ALLOWED_ASSET_TYPES),
-    limits: { fileSize: MAX_UPLOAD_BYTES },
-  }))
-  async uploadAsset(
-    @Param('id') id: string,
-    @Req() req: any,
-    @UploadedFile() file: Express.Multer.File
-  ) {
-    return this.projectService.addAsset(id, req.user.id, file);
-  }
-
-  @Delete(':id/assets/:assetId')
-  @UseGuards(JwtAuthGuard)
-  async deleteAsset(
-    @Param('id') id: string,
-    @Param('assetId') assetId: string,
-    @Req() req: any
-  ) {
-    return this.projectService.deleteAsset(id, assetId, req.user.id);
-  }
-
-  @Patch(':id/assets/:assetId/transform')
-  @UseGuards(JwtAuthGuard)
-  async updateAssetTransform(
-    @Param('id') id: string,
-    @Param('assetId') assetId: string,
-    @Body() body: UpdateAssetTransformDto,
-    @Req() req: any
-  ) {
-    return this.projectService.updateAssetTransform(id, assetId, req.user.id, body);
-  }
-
-
   // --- TRIGGER IMAGE ---
 
   @Post(':id/trigger')
@@ -127,5 +78,18 @@ export class ProjectController {
   @UseGuards(JwtAuthGuard)
   async deleteTriggerImage(@Param('id') id: string, @Req() req: any) {
     return this.projectService.deleteTriggerImage(id, req.user.id);
+  }
+
+  // Designer nhập tay kích thước thật (mét) của trigger image sau khi upload —
+  // bắt buộc để mobile app track đúng tỉ lệ ngoài đời. Endpoint riêng vì đây là
+  // JSON thường (không phải multipart) và tách biệt khỏi flow upload file.
+  @Patch(':id/trigger/dimensions')
+  @UseGuards(JwtAuthGuard)
+  async setTriggerDimensions(
+    @Param('id') id: string,
+    @Body() body: SetTriggerDimensionsDto,
+    @Req() req: any
+  ) {
+    return this.projectService.setTriggerDimensions(id, req.user.id, body);
   }
 }
