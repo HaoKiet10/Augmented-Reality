@@ -17,7 +17,7 @@ export function AssetList({ assets, activeAsset, onSelectAsset, onDeleteAsset }:
                 <span className="text-xs font-normal text-gray-500">({assets.length} items)</span>
             </h3>
 
-            <div className="flex-1 overflow-y-auto max-h-[300px] pr-1 flex flex-col gap-2">
+            <div className="flex-1 overflow-y-auto max-h-75 pr-1 flex flex-col gap-2">
                 {assets.length === 0 ? (
                     <div className="h-32 border border-white/5 border-dashed rounded-xl flex flex-col items-center justify-center text-center p-4">
                         <Box size={24} className="text-gray-600 mb-2" />
