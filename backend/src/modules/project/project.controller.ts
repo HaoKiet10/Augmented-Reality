@@ -92,4 +92,18 @@ export class ProjectController {
   ) {
     return this.projectService.setTriggerDimensions(id, req.user.id, body);
   }
+
+  // --- PUBLISH ---
+
+  @Post(':id/publish')
+  @UseGuards(JwtAuthGuard)
+  async publish(@Param('id') id: string, @Req() req: any) {
+    return this.projectService.publish(id, req.user.id);
+  }
+
+  @Post(':id/unpublish')
+  @UseGuards(JwtAuthGuard)
+  async unpublish(@Param('id') id: string, @Req() req: any) {
+    return this.projectService.unpublish(id, req.user.id);
+  }
 }

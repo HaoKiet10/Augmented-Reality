@@ -1,4 +1,4 @@
-import { IsDateString, IsIn, IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsDateString, IsOptional, IsString, MaxLength } from 'class-validator';
 
 /**
  * Chỉ liệt kê ĐÚNG các field người dùng được phép tự sửa qua API.
@@ -17,9 +17,9 @@ export class UpdateProjectDto {
   @MaxLength(2000)
   description?: string;
 
-  @IsOptional()
-  @IsIn(['draft', 'published', 'archived'])
-  status?: string;
+  // status KHÔNG cho set qua đây nữa — publish/unpublish phải qua
+  // POST /projects/:id/publish và /unpublish, vì cần validate đủ điều kiện
+  // (có trigger image, kích thước thật, ít nhất 1 asset) trước khi cho publish.
 
   // Dashboard đánh dấu "vừa mở project" bằng field này để sắp xếp danh sách gần đây.
   // Chỉ ảnh hưởng thứ tự hiển thị project của CHÍNH người dùng đó, không có tác động

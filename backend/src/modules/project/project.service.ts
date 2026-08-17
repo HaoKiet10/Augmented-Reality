@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from './storage.service';
 import { UpdateProjectDto } from './dto/update-project.dto';
@@ -149,6 +149,50 @@ export class ProjectService {
       data: {
         triggerPhysicalWidth: dto.physicalWidth,
         triggerPhysicalHeight: dto.physicalHeight,
+      },
+    });
+  }
+
+  // --- PUBLISH ---
+
+  /**
+   * Publish project cho mobile app quét được. Validate đủ điều kiện trước khi
+   * cho publish, tránh trường hợp GET /public/projects/:id trả về data thiếu
+   * (không có trigger image / kích thước thật / chưa có asset nào).
+   */
+  async publish(projectId: string, designerId: string) {
+    const project = await this.findOne(projectId, designerId);
+
+    const missing: string[] = [];
+    if (!project.triggerImageUrl) missing.push('trigger image');
+    if (!project.triggerPhysicalWidth || !project.triggerPhysicalHeight) {
+      missing.push('kích thước thật của trigger image (physicalWidth/physicalHeight)');
+    }
+    if (project.assets.length === 0) missing.push('ít nhất 1 asset');
+
+    if (missing.length > 0) {
+      throw new BadRequestException(
+        `Chưa thể publish, còn thiếu: ${missing.join(', ')}`
+      );
+    }
+
+    return this.prisma.project.update({
+      where: { id: projectId },
+      data: {
+        status: 'published',
+        publishedAt: new Date(),
+      },
+    });
+  }
+
+  async unpublish(projectId: string, designerId: string) {
+    await this.findOne(projectId, designerId);
+
+    return this.prisma.project.update({
+      where: { id: projectId },
+      data: {
+        status: 'draft',
+        publishedAt: null,
       },
     });
   }
