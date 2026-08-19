@@ -45,11 +45,7 @@ model Project {
   description  String?
   status       String    @default("draft") // draft, published, archived
   triggerImage String? // Storage key of trigger image in Supabase Storage
-  triggerImageUrl String? // Public URL of trigger image
-  // Kích thước THẬT của trigger image ngoài đời (mét) — bắt buộc để ARKit/ARCore
-  // (ViroARImageMarker) track chính xác khoảng cách/scale khi mobile app quét ảnh.
-  triggerPhysicalWidth  Float?
-  triggerPhysicalHeight Float?
+  triggerImageUrl String? // Public URL của trigger image
   publishedAt  DateTime?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt

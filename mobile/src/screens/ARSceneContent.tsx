@@ -11,6 +11,13 @@ import { PublicProject } from '../types/ar';
 
 const TRACKING_TARGET_NAME = 'active_project_trigger';
 
+// Kích thước "danh nghĩa" cố định cho MỌI project, không phải kích thước thật.
+// Coi trigger image luôn là 1 đơn vị chiều rộng — designer định vị/scale asset
+// TƯƠNG ĐỐI theo đơn vị này (0.5 = bằng nửa chiều rộng ảnh trigger), không phải mét
+// tuyệt đối. Nhờ vậy overlay luôn hiện đúng tỉ lệ trên camera dù ảnh được in/hiển
+// thị ở kích thước thật bất kỳ (giống cách Artivive/MindAR hoạt động).
+const NOMINAL_MARKER_WIDTH = 1.0;
+
 interface Props {
   project: PublicProject;
   onMarkerFound: () => void;
@@ -22,15 +29,15 @@ interface Props {
  * Gọi 1 LẦN DUY NHẤT trước khi ARScene mount — không gọi lại trong render loop.
  */
 export function registerProjectTrigger(project: PublicProject) {
-  if (!project.triggerImageUrl || !project.triggerPhysicalWidth) {
-    throw new Error('Project thiếu trigger image hoặc chưa khai báo kích thước thật (physicalWidth)');
+  if (!project.triggerImageUrl) {
+    throw new Error('Project chưa có trigger image');
   }
 
   ViroARTrackingTargets.createTargets({
     [TRACKING_TARGET_NAME]: {
       source: { uri: project.triggerImageUrl },
       orientation: 'Up',
-      physicalWidth: project.triggerPhysicalWidth,
+      physicalWidth: NOMINAL_MARKER_WIDTH,
       type: 'Image',
     },
   });

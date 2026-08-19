@@ -24,7 +24,5 @@ export interface PublicProject {
   name: string;
   description: string | null;
   triggerImageUrl: string | null;
-  triggerPhysicalWidth: number | null; // mét
-  triggerPhysicalHeight: number | null; // mét
   assets: ARAsset[];
 }

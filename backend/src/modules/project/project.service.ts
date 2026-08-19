@@ -2,7 +2,6 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from './storage.service';
 import { UpdateProjectDto } from './dto/update-project.dto';
-import { SetTriggerDimensionsDto } from './dto/set-trigger-dimensions.dto';
 import { validateUploadedFile, ALLOWED_TRIGGER_IMAGE_TYPES } from './asset-validation';
 
 @Injectable()
@@ -127,28 +126,6 @@ export class ProjectService {
       data: {
         triggerImage: null,
         triggerImageUrl: null,
-        triggerPhysicalWidth: null,
-        triggerPhysicalHeight: null,
-      },
-    });
-  }
-
-  /**
-   * Designer nhập tay kích thước thật (mét) của trigger image sau khi in ra/dán lên vật thể.
-   * Bắt buộc phải có trước khi publish, nếu không mobile app sẽ track sai tỉ lệ.
-   */
-  async setTriggerDimensions(projectId: string, designerId: string, dto: SetTriggerDimensionsDto) {
-    const project = await this.findOne(projectId, designerId);
-
-    if (!project.triggerImage) {
-      throw new NotFoundException('Project has no trigger image set yet');
-    }
-
-    return this.prisma.project.update({
-      where: { id: projectId },
-      data: {
-        triggerPhysicalWidth: dto.physicalWidth,
-        triggerPhysicalHeight: dto.physicalHeight,
       },
     });
   }
@@ -156,18 +133,17 @@ export class ProjectService {
   // --- PUBLISH ---
 
   /**
-   * Publish project cho mobile app quét được. Validate đủ điều kiện trước khi
-   * cho publish, tránh trường hợp GET /public/projects/:id trả về data thiếu
-   * (không có trigger image / kích thước thật / chưa có asset nào).
+   * Publish project cho mobile app quét được. Không yêu cầu kích thước thật —
+   * mobile app dùng NOMINAL_MARKER_WIDTH cố định (xem ARSceneContent.tsx phía
+   * mobile) và position/scale của asset được hiểu là TỈ LỆ theo chiều rộng
+   * marker, không phải mét tuyệt đối. Overlay vẫn hiện đúng tỉ lệ trên camera
+   * dù trigger image được in/hiển thị ở kích thước thật bất kỳ.
    */
   async publish(projectId: string, designerId: string) {
     const project = await this.findOne(projectId, designerId);
 
     const missing: string[] = [];
     if (!project.triggerImageUrl) missing.push('trigger image');
-    if (!project.triggerPhysicalWidth || !project.triggerPhysicalHeight) {
-      missing.push('kích thước thật của trigger image (physicalWidth/physicalHeight)');
-    }
     if (project.assets.length === 0) missing.push('ít nhất 1 asset');
 
     if (missing.length > 0) {
@@ -228,8 +204,6 @@ export class ProjectService {
       name: project.name,
       description: project.description,
       triggerImageUrl: project.triggerImageUrl,
-      triggerPhysicalWidth: project.triggerPhysicalWidth,
-      triggerPhysicalHeight: project.triggerPhysicalHeight,
       assets: project.assets,
     };
   }

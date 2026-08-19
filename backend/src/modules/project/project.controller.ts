@@ -4,7 +4,6 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
-import { SetTriggerDimensionsDto } from './dto/set-trigger-dimensions.dto';
 import { ALLOWED_TRIGGER_IMAGE_TYPES } from './asset-validation';
 
 /** multer fileFilter: chặn SỚM theo tên/mimetype trước khi buffer cả file vào RAM.
@@ -78,19 +77,6 @@ export class ProjectController {
   @UseGuards(JwtAuthGuard)
   async deleteTriggerImage(@Param('id') id: string, @Req() req: any) {
     return this.projectService.deleteTriggerImage(id, req.user.id);
-  }
-
-  // Designer nhập tay kích thước thật (mét) của trigger image sau khi upload —
-  // bắt buộc để mobile app track đúng tỉ lệ ngoài đời. Endpoint riêng vì đây là
-  // JSON thường (không phải multipart) và tách biệt khỏi flow upload file.
-  @Patch(':id/trigger/dimensions')
-  @UseGuards(JwtAuthGuard)
-  async setTriggerDimensions(
-    @Param('id') id: string,
-    @Body() body: SetTriggerDimensionsDto,
-    @Req() req: any
-  ) {
-    return this.projectService.setTriggerDimensions(id, req.user.id, body);
   }
 
   // --- PUBLISH ---

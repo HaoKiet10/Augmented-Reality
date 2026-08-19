@@ -54,6 +54,29 @@ export function useProjectData(id: string | undefined) {
         setActiveAsset((prev) => (prev?.id === assetId ? { ...prev, transform } : prev));
     };
 
+    /** Publish project — backend tự validate đủ trigger image/kích thước/asset chưa */
+    const publishProject = async () => {
+        if (!id) return;
+        const res = await authFetch(`${API_URL}/projects/${id}/publish`, { method: 'POST' });
+        const data = await res.json();
+        if (!res.ok) {
+            throw new Error(data?.message || 'Publish thất bại');
+        }
+        setProject((prev) => (prev ? { ...prev, status: data.status, publishedAt: data.publishedAt } : prev));
+        return data;
+    };
+
+    const unpublishProject = async () => {
+        if (!id) return;
+        const res = await authFetch(`${API_URL}/projects/${id}/unpublish`, { method: 'POST' });
+        const data = await res.json();
+        if (!res.ok) {
+            throw new Error(data?.message || 'Unpublish thất bại');
+        }
+        setProject((prev) => (prev ? { ...prev, status: data.status, publishedAt: data.publishedAt } : prev));
+        return data;
+    };
+
     return {
         project, setProject,
         assets, setAssets,
@@ -61,5 +84,7 @@ export function useProjectData(id: string | undefined) {
         loading,
         error, setError,
         updateAssetTransform,
+        publishProject,
+        unpublishProject,
     };
 }

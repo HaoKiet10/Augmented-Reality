@@ -12,7 +12,9 @@ interface PositionControlsProps {
 export function PositionControls({ posX, posY, posZ, setPosX, setPosY, setPosZ }: PositionControlsProps) {
     return (
         <div className="flex flex-col gap-3">
-            <span className="text-xs font-semibold text-gray-400">Position (X, Y, Z)</span>
+            <span className="text-xs font-semibold text-gray-400">
+                Position (X, Y, Z) — tỉ lệ theo chiều rộng trigger image
+            </span>
 
             <div className="grid grid-cols-3 gap-2">
                 <AxisInputGroup label="X Position" value={posX} onChange={setPosX} step={0.05} />
@@ -21,9 +23,9 @@ export function PositionControls({ posX, posY, posZ, setPosX, setPosY, setPosZ }
             </div>
 
             <div className="mt-1 flex flex-col gap-2">
-                <AxisSlider sliderLabel="X-Axis (Horizontal)" value={posX} onChange={setPosX} step={0.05} min={-10} max={10} unit="m" />
-                <AxisSlider sliderLabel="Y-Axis (Vertical)" value={posY} onChange={setPosY} step={0.05} min={-10} max={10} unit="m" />
-                <AxisSlider sliderLabel="Z-Axis (Depth)" value={posZ} onChange={setPosZ} step={0.05} min={-10} max={10} unit="m" />
+                <AxisSlider sliderLabel="X-Axis (Horizontal)" value={posX} onChange={setPosX} step={0.05} min={-10} max={10} unit="x" />
+                <AxisSlider sliderLabel="Y-Axis (Vertical)" value={posY} onChange={setPosY} step={0.05} min={-10} max={10} unit="x" />
+                <AxisSlider sliderLabel="Z-Axis (Depth)" value={posZ} onChange={setPosZ} step={0.05} min={-10} max={10} unit="x" />
             </div>
         </div>
     );

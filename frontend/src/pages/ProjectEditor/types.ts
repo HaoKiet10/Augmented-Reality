@@ -30,6 +30,7 @@ export interface Project {
     status: ProjectStatus;
     triggerImage: string | null;
     triggerImageUrl: string | null;
+    publishedAt: string | null;
     createdAt: string;
     lastOpenedAt: string;
 }

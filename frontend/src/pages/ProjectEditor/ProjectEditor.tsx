@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { API_URL } from '../../config';
@@ -32,7 +33,36 @@ export const ProjectEditor: React.FC = () => {
         loading,
         error, setError,
         updateAssetTransform,
+        publishProject,
+        unpublishProject,
     } = useProjectData(id);
+
+    const [publishLoading, setPublishLoading] = useState(false);
+    const [publishError, setPublishError] = useState<string | null>(null);
+
+    const handlePublish = async () => {
+        setPublishLoading(true);
+        setPublishError(null);
+        try {
+            await publishProject();
+        } catch (err: any) {
+            setPublishError(err.message);
+        } finally {
+            setPublishLoading(false);
+        }
+    };
+
+    const handleUnpublish = async () => {
+        setPublishLoading(true);
+        setPublishError(null);
+        try {
+            await unpublishProject();
+        } catch (err: any) {
+            setPublishError(err.message);
+        } finally {
+            setPublishLoading(false);
+        }
+    };
 
         const handleUploadTrigger = async (file: File) => {
         const formData = new FormData();
@@ -114,6 +144,10 @@ export const ProjectEditor: React.FC = () => {
                 saveStatus={saveStatus}
                 onBack={() => navigate('/dashboard')}
                 onSaveConfig={handleSaveConfig}
+                onPublish={handlePublish}
+                onUnpublish={handleUnpublish}
+                publishLoading={publishLoading}
+                publishError={publishError}
             />
 
             <div className="flex-1 flex overflow-hidden relative z-10">
