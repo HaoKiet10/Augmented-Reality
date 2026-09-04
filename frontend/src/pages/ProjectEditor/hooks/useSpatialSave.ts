@@ -14,7 +14,8 @@ export function useSpatialSave({ id, activeAsset }: UseSpatialSaveParams) {
     const navigate = useNavigate();
     const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
 
-    const handleSaveConfig = async () => {
+    /** Lưu transform của asset đang chọn — KHÔNG điều hướng, dùng lại được ở nhiều nơi (Done, Publish). */
+    const saveTransform = async () => {
         if (!token || !id || !activeAsset) return;
 
         const transform: AssetTransform = activeAsset.transform ?? {
@@ -23,29 +24,36 @@ export function useSpatialSave({ id, activeAsset }: UseSpatialSaveParams) {
             scale: { x: 1, y: 1, z: 1 },
         };
 
+        setSaveStatus('saving');
+        const response = await authFetch(
+            `${API_URL}/projects/${id}/assets/${activeAsset.id}/transform`,
+            {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(transform),
+            }
+        );
+
+        if (!response.ok) {
+            setSaveStatus('error');
+            throw new Error('Failed to save transform, please try again.');
+        }
+
+        setSaveStatus('saved');
+        setTimeout(() => setSaveStatus('idle'), 3000);
+    };
+
+    /** Nút "Done" — lưu xong thì quay về dashboard. */
+    const handleSaveConfig = async () => {
         try {
-            setSaveStatus('saving');
-            const response = await authFetch(
-                `${API_URL}/projects/${id}/assets/${activeAsset.id}/transform`,
-                {
-                    method: 'PATCH',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(transform),
-                }
-            );
-
-            if (!response.ok) throw new Error('Failed to save transform');
-
-            setSaveStatus('saved');
-            setTimeout(() => setSaveStatus('idle'), 3000);
+            await saveTransform();
             navigate('/dashboard');
         } catch (err: any) {
             console.error(err);
-            setSaveStatus('error');
         }
     };
 
-    return { saveStatus, handleSaveConfig };
+    return { saveStatus, handleSaveConfig, saveTransform };
 }

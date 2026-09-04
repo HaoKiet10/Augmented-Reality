@@ -44,6 +44,7 @@ export const ProjectEditor: React.FC = () => {
         setPublishLoading(true);
         setPublishError(null);
         try {
+            await saveTransform();
             await publishProject();
         } catch (err: any) {
             setPublishError(err.message);
@@ -110,7 +111,7 @@ export const ProjectEditor: React.FC = () => {
         onActiveAssetCleared: () => setActiveAsset(null),
     });
 
-    const { saveStatus, handleSaveConfig } = useSpatialSave({ id, activeAsset });
+    const { saveStatus, handleSaveConfig, saveTransform } = useSpatialSave({ id, activeAsset });
 
     const { name, setName, isEditing, setIsEditing, handleSave, handleKeyDown } = useProjectRename({
         id,
