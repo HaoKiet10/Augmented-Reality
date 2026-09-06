@@ -22,11 +22,17 @@ interface AssetTransform {
  * Sinh transform mặc định cho asset mới, lệch nhẹ ngẫu nhiên trên trục X/Z
  * để các asset không bị chồng lên nhau khi cùng active trong scene.
  */
+/**
+ * Transform mặc định cho asset mới, theo quy ước TỈ LỆ TƯƠNG ĐỐI so với chiều
+ * rộng trigger image (1 = 100% chiều rộng marker) — KHÔNG phải mét tuyệt đối.
+ * Đặt ở giữa marker (position 0,0,0), lệch nhẹ ngẫu nhiên trên trục X/Z để
+ * nhiều asset trong cùng project không chồng khít lên nhau khi cùng active.
+ */
 function generateDefaultTransform(): AssetTransform {
-  const jitter = () => Math.round((Math.random() - 0.5) * 1.0 * 100) / 100; // ±0.5m, 2 chữ số
+  const jitter = () => Math.round((Math.random() - 0.5) * 0.3 * 100) / 100; // ±0.15, đơn vị tương đối
 
   return {
-    position: { x: jitter(), y: 0.8, z: -2 + jitter() },
+    position: { x: jitter(), y: 0, z: jitter() },
     rotation: { x: 0, y: 0, z: 0 },
     scale: { x: 1, y: 1, z: 1 },
   };

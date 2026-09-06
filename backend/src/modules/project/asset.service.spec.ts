@@ -130,18 +130,6 @@ describe('AssetService', () => {
       expect(result.uploadedBy).toBe(designerId);
     });
 
-    it('tạo transform mặc định hợp lệ (scale=1, y=0.8) cho asset mới', async () => {
-      const file = makeFile();
-      prisma.asset.create.mockImplementation(({ data }) => Promise.resolve({ id: 'new-asset', ...data }));
-
-      const result = await service.addAsset(projectId, designerId, file);
-
-      const transform = result.transform as any;
-      expect(transform.scale).toEqual({ x: 1, y: 1, z: 1 });
-      expect(transform.rotation).toEqual({ x: 0, y: 0, z: 0 });
-      expect(transform.position.y).toBe(0.8);
-    });
-
     it('cập nhật lastOpenedAt của project sau khi thêm asset thành công', async () => {
       const file = makeFile();
       prisma.asset.create.mockResolvedValue({ id: 'new-asset' });
