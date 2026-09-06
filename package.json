@@ -66,6 +66,14 @@
       "valibot": "^1.4.2",
       "got": "^11.8.5",
       "nanoid": "^3.3.17"
-    }
+    },
+    "onlyBuiltDependencies": [
+      "@nestjs/core",
+      "@parcel/watcher",
+      "@prisma/engines",
+      "bcrypt",
+      "prisma",
+      "unrs-resolver"
+    ]
   }
 }
