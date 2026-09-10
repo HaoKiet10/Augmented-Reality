@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createHash } from 'crypto';
 import { UserService } from '../user/user.service';
@@ -64,7 +64,7 @@ export class AuthService {
   async signup(signupDto: SignupDto) {
     const existingUser = await this.userService.findByEmail(signupDto.email);
     if (existingUser) {
-      throw new UnauthorizedException('Email already in use');
+      throw new ConflictException('Email already in use');
     }
 
     const user = await this.userService.create({

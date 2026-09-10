@@ -7,7 +7,7 @@ import { z } from 'zod';
 const signupSchema = z.object({
   name: z.string().nonempty('Full Name is required'),
   email: z.email('Invalid email address').nonempty('Email is required'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
+  password: z.string().min(8, 'Password must be at least 8 characters'),
   confirmPassword: z.string().nonempty('Confirm password is required'),
 }).refine((data) => data.password === data.confirmPassword, {
   message: 'Passwords do not match',

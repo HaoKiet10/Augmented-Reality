@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { UnauthorizedException } from '@nestjs/common';
+import { ConflictException, UnauthorizedException } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { UserService } from '../user/user.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -102,12 +102,12 @@ describe('AuthService', () => {
   });
 
   describe('signup', () => {
-    it('throw UnauthorizedException khi email đã tồn tại', async () => {
+    it('throw ConflictException khi email đã tồn tại', async () => {
       userService.findByEmail.mockResolvedValue(fakeUser);
 
       await expect(
         service.signup({ email: 'a@test.com', password: 'abcdefgh' }),
-      ).rejects.toThrow(UnauthorizedException);
+      ).rejects.toThrow(ConflictException);
       expect(userService.create).not.toHaveBeenCalled();
     });
 
