@@ -63,6 +63,8 @@ model Asset {
   fileSize   Int // Size in bytes
   storageKey String // Supabase Storage key/path
   url        String // Public URL from Supabase CDN
+  width      Int? // Kích thước gốc (px) — chỉ có với ảnh, dùng để giữ đúng tỉ lệ khung hình khi render trong AR scene
+  height     Int? // Kích thước gốc (px) — chỉ có với ảnh
   transform  Json? // AR spatial transform for this asset: { position, rotation, scale }
   projectId  String
   project    Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)

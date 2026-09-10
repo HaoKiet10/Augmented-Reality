@@ -57,6 +57,15 @@ function AssetEntity({
     const transform = asset.transform ?? DEFAULT_SPATIAL_CONFIG;
     const videoElId = `ar-video-src-${asset.id}`;
 
+    // Giữ chiều rộng cố định 1.6 (đơn vị scene) và suy ra chiều cao theo đúng tỉ lệ
+    // khung hình gốc của ảnh (width/height tính bằng px, lưu lúc upload) — nếu không
+    // có dữ liệu này (asset cũ / không đọc được), fallback về hình vuông 1.6x1.6 như cũ.
+    const IMAGE_PLANE_WIDTH = 1.6;
+    const imagePlaneHeight =
+        asset.width && asset.height
+            ? IMAGE_PLANE_WIDTH * (asset.height / asset.width)
+            : IMAGE_PLANE_WIDTH;
+
     const entityProps: any = {
         position: vectorToString(transform.position),
         rotation: vectorToString(transform.rotation),
@@ -85,7 +94,7 @@ function AssetEntity({
                 <Entity primitive="a-video" src={`#${videoElId}`} width="1.6" height="0.9" material="side: double" />
             )}
             {isImage && (
-                <Entity primitive="a-image" src={asset.url} width="1.6" height="1.6" material="side: double" />
+                <Entity primitive="a-image" src={asset.url} width={String(IMAGE_PLANE_WIDTH)} height={String(imagePlaneHeight)} material="side: double" />
             )}
             {!isVideo && !isImage && <Entity primitive="a-gltf-model" src={asset.url} />}
 

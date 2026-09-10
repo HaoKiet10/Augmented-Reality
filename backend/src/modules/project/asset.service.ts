@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { imageSize } from 'image-size';
 import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from './storage.service';
 import { ProjectService } from './project.service';
@@ -79,6 +80,21 @@ export class AssetService {
     // 2. Upload file
     const { url, storageKey } = await this.storageService.uploadFile(file, projectId);
 
+    // 2b. Nếu là ảnh, đọc kích thước gốc (px) từ buffer để giữ đúng tỉ lệ khung hình
+    // khi render trong AR scene — nếu không, scene sẽ luôn vẽ ảnh thành hình vuông mặc định.
+    let width: number | undefined;
+    let height: number | undefined;
+    if (file.mimetype.startsWith('image/')) {
+      try {
+        const dimensions = imageSize(file.buffer);
+        width = dimensions.width;
+        height = dimensions.height;
+      } catch {
+        // Không đọc được kích thước (file ảnh hỏng/định dạng lạ) — vẫn cho upload,
+        // scene sẽ fallback về tỉ lệ vuông mặc định.
+      }
+    }
+
     // 3. Create db record với transform mặc định (lệch nhẹ ngẫu nhiên)
     const asset = await this.prisma.asset.create({
       data: {
@@ -87,6 +103,8 @@ export class AssetService {
         fileSize: file.size,
         storageKey,
         url,
+        width,
+        height,
         transform: generateDefaultTransform() as any,
         projectId,
         uploadedBy: designerId,

@@ -17,6 +17,8 @@ export interface Asset {
     fileSize: number;
     url: string;
     storageKey: string;
+    width?: number | null;
+    height?: number | null;
     transform: AssetTransform | null;
     createdAt: string;
 }
