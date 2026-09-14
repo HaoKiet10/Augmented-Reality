@@ -32,10 +32,15 @@ export function useAframeScript(): boolean {
                             this.el.addEventListener('mousedown', this.onMouseDown);
                         },
                         onMouseDown: function (this: any, evt: any) {
+                            const originalEvent = evt.detail.mouseEvent || evt.detail.touchEvent || evt;
+
+                            // Chỉ chuột TRÁI mới kéo được asset. Chuột phải/giữa hoàn toàn thuộc về
+                            // điều khiển camera, không đụng gì asset (xem free-fly-controls).
+                            if (typeof originalEvent.button === 'number' && originalEvent.button !== 0) return;
+
                             const camera = this.el.sceneEl.camera;
                             if (!camera) return;
 
-                            const originalEvent = evt.detail.mouseEvent || evt.detail.touchEvent || evt;
                             // Get plane normal facing the camera
                             const cameraDirection = new THREE.Vector3();
                             camera.getWorldDirection(cameraDirection);
@@ -66,12 +71,6 @@ export function useAframeScript(): boolean {
 
                             this.isDragging = true;
                             this.el.emit('dragstart');
-
-                            const cameraEl = camera.el;
-                            if (cameraEl && cameraEl.components['look-controls']) {
-                                cameraEl.setAttribute('look-controls', 'enabled', false);
-                            }
-
                             evt.stopPropagation();
 
                             // Offset between object position and mouse intersection point
@@ -136,12 +135,6 @@ export function useAframeScript(): boolean {
                                 this.isDragging = false;
                                 this.el.emit('dragend');
 
-                                const camera = this.el.sceneEl.camera;
-                                const cameraEl = camera?.el;
-                                if (cameraEl && cameraEl.components['look-controls']) {
-                                    cameraEl.setAttribute('look-controls', 'enabled', true);
-                                }
-
                                 window.removeEventListener('mousemove', this.onMouseMove);
                                 window.removeEventListener('touchmove', this.onMouseMove);
                                 window.removeEventListener('mouseup', this.onMouseUp);
@@ -178,7 +171,7 @@ export function useAframeScript(): boolean {
                         },
                         onMouseDown: function (this: any, evt: any) {
                             const originalEvent = evt.detail.mouseEvent || evt.detail.touchEvent || evt;
-                            evt.stopPropagation();
+                            if (typeof originalEvent.button === 'number' && originalEvent.button !== 0) return;
 
                             const camera = this.el.sceneEl.camera;
                             const parentEl = this.el.parentEl;
@@ -194,11 +187,7 @@ export function useAframeScript(): boolean {
 
                             this.isDragging = true;
                             this.el.emit('scalestart');
-
-                            const cameraEl = camera.el;
-                            if (cameraEl && cameraEl.components['look-controls']) {
-                                cameraEl.setAttribute('look-controls', 'enabled', false);
-                            }
+                            evt.stopPropagation();
 
                             this.startDistance = dist;
                             const currentScale = parentEl.getAttribute('scale') || { x: 1, y: 1, z: 1 };
@@ -237,11 +226,151 @@ export function useAframeScript(): boolean {
                             this.isDragging = false;
                             this.el.emit('scaleend');
 
+                            window.removeEventListener('mousemove', this.onMouseMove);
+                            window.removeEventListener('touchmove', this.onMouseMove);
+                            window.removeEventListener('mouseup', this.onMouseUp);
+                            window.removeEventListener('touchend', this.onMouseUp);
+                        },
+                        remove: function (this: any) {
+                            this.el.removeEventListener('mousedown', this.onMouseDown);
+                            window.removeEventListener('mousemove', this.onMouseMove);
+                            window.removeEventListener('touchmove', this.onMouseMove);
+                            window.removeEventListener('mouseup', this.onMouseUp);
+                            window.removeEventListener('touchend', this.onMouseUp);
+                        }
+                    });
+                }
+
+                if (!AFRAME.components['axis-handle']) {
+                    AFRAME.registerComponent('axis-handle', {
+                        schema: {
+                            axis: { type: 'string', default: 'x' }, // 'x' | 'y' | 'z'
+                            color: { type: 'color', default: '#ffffff' } // màu gốc — dùng để trả lại khi hết hover/kéo
+                        },
+                        init: function (this: any) {
+                            this.isDragging = false;
+                            this.isHovered = false;
+                            this.plane = new THREE.Plane();
+                            this.raycaster = new THREE.Raycaster();
+                            this.mouse = new THREE.Vector2();
+                            this.intersection = new THREE.Vector3();
+                            this.axisDir = new THREE.Vector3();
+                            this.startObjectPos = new THREE.Vector3();
+                            this.startProjection = 0;
+
+                            this.onMouseDown = this.onMouseDown.bind(this);
+                            this.onMouseMove = this.onMouseMove.bind(this);
+                            this.onMouseUp = this.onMouseUp.bind(this);
+                            this.onMouseEnter = this.onMouseEnter.bind(this);
+                            this.onMouseLeave = this.onMouseLeave.bind(this);
+
+                            this.el.addEventListener('mousedown', this.onMouseDown);
+                            // 'mouseenter'/'mouseleave' do component cursor của A-Frame tự bắn dựa theo
+                            // raycaster trỏ tới entity nào — thuần theo vị trí con trỏ, không phụ thuộc
+                            // nút chuột nào đang giữ, đúng nghĩa "hover".
+                            this.el.addEventListener('mouseenter', this.onMouseEnter);
+                            this.el.addEventListener('mouseleave', this.onMouseLeave);
+
+                            this.updateVisual();
+                        },
+                        onMouseEnter: function (this: any) {
+                            this.isHovered = true;
+                            this.updateVisual();
+                        },
+                        onMouseLeave: function (this: any) {
+                            this.isHovered = false;
+                            this.updateVisual();
+                        },
+                        // Hover hoặc đang kéo: sáng màu vàng + phình to 1.4x cho dễ thấy đang chọn
+                        // đúng trục nào. Nhả ra thì về màu gốc + kích thước bình thường.
+                        updateVisual: function (this: any) {
+                            const highlighted = this.isHovered || this.isDragging;
+                            this.el.setAttribute('material', 'color', highlighted ? '#fde047' : this.data.color);
+                            const s = highlighted ? 1.4 : 1;
+                            this.el.setAttribute('scale', { x: s, y: s, z: s });
+                        },
+                        // Kéo dọc theo ĐÚNG 1 trục thế giới bằng cách: dựng 1 mặt phẳng quay mặt về
+                        // camera đi qua vị trí object (y hệt draggable-object), lấy giao điểm tia
+                        // chuột với mặt phẳng đó, rồi CHIẾU (dot product) độ lệch của giao điểm lên
+                        // đúng vector trục đang kéo — bỏ qua hoàn toàn phần lệch vuông góc với trục.
+                        // Nhờ vậy object chỉ trượt dọc theo 1 đường thẳng dù tay kéo không thật sự
+                        // thẳng hàng với trục trên màn hình.
+                        onMouseDown: function (this: any, evt: any) {
+                            const originalEvent = evt.detail.mouseEvent || evt.detail.touchEvent || evt;
+                            if (typeof originalEvent.button === 'number' && originalEvent.button !== 0) return;
+
                             const camera = this.el.sceneEl.camera;
-                            const cameraEl = camera && camera.el;
-                            if (cameraEl && cameraEl.components['look-controls']) {
-                                cameraEl.setAttribute('look-controls', 'enabled', true);
-                            }
+                            const targetEl = this.el.parentEl; // wrapper gizmo — vị trí của nó = vị trí asset
+                            if (!camera || !targetEl) return;
+
+                            this.axisDir.set(
+                                this.data.axis === 'x' ? 1 : 0,
+                                this.data.axis === 'y' ? 1 : 0,
+                                this.data.axis === 'z' ? 1 : 0
+                            );
+
+                            targetEl.object3D.getWorldPosition(this.startObjectPos);
+
+                            const cameraDirection = new THREE.Vector3();
+                            camera.getWorldDirection(cameraDirection);
+                            this.plane.setFromNormalAndCoplanarPoint(cameraDirection.negate(), this.startObjectPos);
+
+                            const clientX = originalEvent.touches ? originalEvent.touches[0].clientX : originalEvent.clientX;
+                            const clientY = originalEvent.touches ? originalEvent.touches[0].clientY : originalEvent.clientY;
+                            const rect = this.el.sceneEl.canvas.getBoundingClientRect();
+                            this.mouse.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+                            this.mouse.y = -((clientY - rect.top) / rect.height) * 2 + 1;
+                            this.raycaster.setFromCamera(this.mouse, camera);
+
+                            const downHit = this.raycaster.ray.intersectPlane(this.plane, this.intersection);
+                            if (!downHit) return;
+
+                            this.startProjection = this.intersection.clone().sub(this.startObjectPos).dot(this.axisDir);
+
+                            this.isDragging = true;
+                            this.updateVisual();
+                            this.el.emit('axisdragstart');
+                            evt.stopPropagation();
+
+                            window.addEventListener('mousemove', this.onMouseMove);
+                            window.addEventListener('touchmove', this.onMouseMove);
+                            window.addEventListener('mouseup', this.onMouseUp);
+                            window.addEventListener('touchend', this.onMouseUp);
+                        },
+                        onMouseMove: function (this: any, evt: any) {
+                            if (!this.isDragging) return;
+                            const camera = this.el.sceneEl.camera;
+                            if (!camera) return;
+
+                            const clientX = evt.touches ? evt.touches[0].clientX : evt.clientX;
+                            const clientY = evt.touches ? evt.touches[0].clientY : evt.clientY;
+                            const rect = this.el.sceneEl.canvas.getBoundingClientRect();
+                            this.mouse.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+                            this.mouse.y = -((clientY - rect.top) / rect.height) * 2 + 1;
+                            this.raycaster.setFromCamera(this.mouse, camera);
+
+                            const moveHit = this.raycaster.ray.intersectPlane(this.plane, this.intersection);
+                            if (!moveHit) return;
+
+                            const projection = this.intersection.clone().sub(this.startObjectPos).dot(this.axisDir);
+                            const delta = projection - this.startProjection;
+                            const newPos = this.startObjectPos.clone().add(this.axisDir.clone().multiplyScalar(delta));
+
+                            const roundedPos = {
+                                x: Math.round(newPos.x * 100) / 100,
+                                y: Math.round(newPos.y * 100) / 100,
+                                z: Math.round(newPos.z * 100) / 100
+                            };
+
+                            // Emit lên parentEl (wrapper gizmo) — React nghe ở đó để cập nhật state,
+                            // xem AxisGizmo trong ArScene.tsx.
+                            this.el.parentEl.emit('axisdragposition', roundedPos);
+                        },
+                        onMouseUp: function (this: any) {
+                            if (!this.isDragging) return;
+                            this.isDragging = false;
+                            this.updateVisual();
+                            this.el.emit('axisdragend');
 
                             window.removeEventListener('mousemove', this.onMouseMove);
                             window.removeEventListener('touchmove', this.onMouseMove);
@@ -250,6 +379,8 @@ export function useAframeScript(): boolean {
                         },
                         remove: function (this: any) {
                             this.el.removeEventListener('mousedown', this.onMouseDown);
+                            this.el.removeEventListener('mouseenter', this.onMouseEnter);
+                            this.el.removeEventListener('mouseleave', this.onMouseLeave);
                             window.removeEventListener('mousemove', this.onMouseMove);
                             window.removeEventListener('touchmove', this.onMouseMove);
                             window.removeEventListener('mouseup', this.onMouseUp);
@@ -266,14 +397,36 @@ export function useAframeScript(): boolean {
                         },
                         init: function (this: any) {
                             this.keys = {};
+
+                            // Yaw/pitch (độ) — thay thế look-controls built-in của A-Frame.
+                            // Khởi tạo từ rotation attribute hiện tại để không bị giật khi bắt đầu kéo.
+                            const initialRotation = this.el.getAttribute('rotation') || { x: 0, y: 0, z: 0 };
+                            this.pitch = initialRotation.x;
+                            this.yaw = initialRotation.y;
+
+                            this.isRotating = false; // giữ chuột phải
+                            this.lastX = 0;
+                            this.lastY = 0;
+
                             this.onKeyDown = this.onKeyDown.bind(this);
                             this.onKeyUp = this.onKeyUp.bind(this);
                             this.onBlur = this.onBlur.bind(this);
+                            this.onMouseDown = this.onMouseDown.bind(this);
+                            this.onMouseMove = this.onMouseMove.bind(this);
+                            this.onMouseUp = this.onMouseUp.bind(this);
+                            this.onWheel = this.onWheel.bind(this);
+                            this.onContextMenu = this.onContextMenu.bind(this);
+
                             // Tự lắng nghe trên window (không dùng wasd-controls / shouldCaptureKeyEvent
                             // có sẵn của A-Frame) — component built-in của A-Frame chỉ nhận phím khi
                             // document.activeElement === document.body, nên chỉ cần bấm 1 nút/input bất kỳ
                             // trên trang (sidebar, header...) là WASD im re cho tới khi focus quay lại body.
-                            window.addEventListener('keydown', this.onKeyDown);
+                            // keydown gắn ở CAPTURE phase (tham số thứ 3 = true) — chạy TRƯỚC mọi listener
+                            // khác đăng ký theo kiểu bubble mặc định (kể cả listener nội bộ của A-Frame,
+                            // extension trình duyệt...). Nhờ vậy onKeyDown có thể stopPropagation() để các
+                            // phím mình đã xử lý (đặc biệt là F) không bị phần nào khác "giành" xử lý tiếp,
+                            // ví dụ phím F từng bị đè lên fullscreen do 1 listener khác cũng nghe cùng phím.
+                            window.addEventListener('keydown', this.onKeyDown, true);
                             window.addEventListener('keyup', this.onKeyUp);
                             // Khi trang mất focus (Ctrl+P, alt+tab, mở dialog khác...), phím đang giữ
                             // rất hay KHÔNG bắn được sự kiện keyup (trình duyệt/OS giữ luôn sự kiện đó) —
@@ -281,9 +434,29 @@ export function useAframeScript(): boolean {
                             // bay tới hoài dù tay đã buông phím từ lâu. Reset sạch mỗi khi mất focus.
                             window.addEventListener('blur', this.onBlur);
                             document.addEventListener('visibilitychange', this.onBlur);
+
+                            // mousedown/wheel/contextmenu gắn trên <a-scene> (không phải canvas trực tiếp)
+                            // vì canvas có thể chưa tồn tại lúc component này init — event từ canvas vẫn
+                            // bubble lên tới sceneEl bình thường. mousemove/mouseup gắn trên window để vẫn
+                            // kéo được mượt kể cả khi con trỏ lướt ra ngoài canvas.
+                            this.el.sceneEl.addEventListener('mousedown', this.onMouseDown);
+                            this.el.sceneEl.addEventListener('wheel', this.onWheel, { passive: false });
+                            this.el.sceneEl.addEventListener('contextmenu', this.onContextMenu);
+                            window.addEventListener('mousemove', this.onMouseMove);
+                            window.addEventListener('mouseup', this.onMouseUp);
                         },
                         onKeyDown: function (this: any, e: KeyboardEvent) {
-                            this.keys[e.key.toLowerCase()] = true;
+                            const key = e.key.toLowerCase();
+                            const HANDLED_KEYS = [' ', 'w', 'a', 's', 'd', 'e', 'q', 'f'];
+                            if (HANDLED_KEYS.includes(key)) {
+                                // preventDefault: chặn hành vi mặc định của trình duyệt (Space cuộn trang...).
+                                // stopPropagation: chặn listener khác (nếu có) cũng đang nghe đúng phím này ở
+                                // pha bubble phía sau — đây là fix cho lỗi F bị đè lên fullscreen.
+                                e.preventDefault();
+                                e.stopPropagation();
+                            }
+                            this.keys[key] = true;
+                            if (key === 'f') this.focusOnSelected();
                         },
                         onKeyUp: function (this: any, e: KeyboardEvent) {
                             this.keys[e.key.toLowerCase()] = false;
@@ -291,41 +464,124 @@ export function useAframeScript(): boolean {
                         onBlur: function (this: any) {
                             this.keys = {};
                         },
+                        // Chuột phải + kéo = xoay góc nhìn (thay cho look-controls built-in, vốn xoay
+                        // theo chuột trái — trái giờ dành riêng cho chọn/kéo asset). Bấm phải lên asset
+                        // không ảnh hưởng gì tới thao tác xoay này (draggable-object chỉ nhận chuột trái,
+                        // xem useAframeScript.ts phần draggable-object).
+                        // Chuột giữa: tạm thời không có chức năng gì.
+                        onMouseDown: function (this: any, evt: MouseEvent) {
+                            if (evt.button === 2) {
+                                evt.preventDefault();
+                                this.isRotating = true;
+                                this.lastX = evt.clientX;
+                                this.lastY = evt.clientY;
+                            }
+                        },
+                        onMouseMove: function (this: any, evt: MouseEvent) {
+                            if (this.isRotating) {
+                                const dx = evt.clientX - this.lastX;
+                                const dy = evt.clientY - this.lastY;
+                                this.lastX = evt.clientX;
+                                this.lastY = evt.clientY;
+
+                                const ROTATE_SENSITIVITY = 0.15;
+                                this.yaw -= dx * ROTATE_SENSITIVITY;
+                                this.pitch -= dy * ROTATE_SENSITIVITY;
+                                this.pitch = Math.max(-89, Math.min(89, this.pitch));
+                                this.el.setAttribute('rotation', { x: this.pitch, y: this.yaw, z: 0 });
+                            }
+                        },
+                        onMouseUp: function (this: any, evt: MouseEvent) {
+                            if (evt.button === 2) this.isRotating = false;
+                        },
+                        // Lăn chuột = zoom (tiến/lùi theo hướng camera đang nhìn).
+                        onWheel: function (this: any, evt: WheelEvent) {
+                            evt.preventDefault();
+                            const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(this.el.object3D.quaternion);
+                            const ZOOM_SPEED = 0.0015;
+                            const delta = -evt.deltaY * ZOOM_SPEED;
+                            const pos = this.el.getAttribute('position');
+                            this.el.setAttribute('position', {
+                                x: pos.x + forward.x * delta,
+                                y: pos.y + forward.y * delta,
+                                z: pos.z + forward.z * delta,
+                            });
+                        },
+                        onContextMenu: function (this: any, evt: Event) {
+                            // Right-click dùng để xoay camera — chặn menu chuột phải mặc định của browser.
+                            evt.preventDefault();
+                        },
+                        // Phím F: bay camera lại gần và nhìn thẳng vào asset đang được chọn (đánh dấu
+                        // bằng attribute data-selected="true" trên entity gốc, xem ArScene.tsx).
+                        focusOnSelected: function (this: any) {
+                            const targetEl = this.el.sceneEl.querySelector('[data-selected="true"]');
+                            if (!targetEl || !targetEl.object3D) return;
+
+                            const targetPos = new THREE.Vector3();
+                            targetEl.object3D.getWorldPosition(targetPos);
+
+                            const camPos = this.el.object3D.position;
+                            const dir = new THREE.Vector3().subVectors(camPos, targetPos);
+                            if (dir.lengthSq() < 0.0001) dir.set(0, 0, 1);
+                            dir.normalize();
+
+                            const FOCUS_DISTANCE = 2.2;
+                            const newCamPos = targetPos.clone().add(dir.multiplyScalar(FOCUS_DISTANCE));
+                            newCamPos.y = Math.max(newCamPos.y, 0.2); // tránh camera chui xuống sàn
+
+                            this.el.setAttribute('position', newCamPos);
+
+                            // Dùng lookAt + phân rã quaternion (thứ tự Euler 'YXZ', khớp với cách A-Frame
+                            // compose rotation attribute) để tính đúng yaw/pitch thay vì tự suy lượng giác.
+                            const dummy = new THREE.Object3D();
+                            dummy.position.copy(newCamPos);
+                            dummy.lookAt(targetPos);
+                            const euler = new THREE.Euler().setFromQuaternion(dummy.quaternion, 'YXZ');
+                            this.pitch = THREE.MathUtils.radToDeg(euler.x);
+                            this.yaw = THREE.MathUtils.radToDeg(euler.y);
+                            this.el.setAttribute('rotation', { x: this.pitch, y: this.yaw, z: 0 });
+                        },
                         tick: function (this: any, _time: number, timeDelta: number) {
                             if (!this.data.enabled) return;
-                            const speed = this.data.speed * (timeDelta / 16.6);
+                            // Giữ Shift = tăng tốc bay (boost), không còn dùng Shift làm phím "xuống" nữa.
+                            const boost = this.keys['shift'] ? 2.5 : 1;
+                            const speed = this.data.speed * boost * (timeDelta / 16.6);
                             const position = this.el.getAttribute('position');
                             if (!position) return;
 
                             let moved = false;
 
-                            // Space/E lên, Shift/Q xuống — theo trục Y thế giới
+                            // Space/E lên, Q xuống — theo trục Y thế giới.
+                            // KHÔNG dùng Ctrl làm phím "xuống": giữ Ctrl trong lúc bay rất dễ vô tình
+                            // bấm trúng Ctrl+W/Ctrl+S/Ctrl+A — đây là shortcut hệ thống của trình duyệt
+                            // (đóng tab / lưu trang / chọn tất cả) mà JS không preventDefault được.
                             if (this.keys[' '] || this.keys['e']) { position.y += speed; moved = true; }
-                            if (this.keys['shift'] || this.keys['q']) { position.y -= speed; moved = true; }
+                            if (this.keys['q']) { position.y -= speed; moved = true; }
 
-                            // W/A/S/D (hoặc phím mũi tên) — bay theo hướng camera đang nhìn (fly 3D đầy đủ)
+                            // W/A/S/D — bay theo hướng camera đang nhìn (fly 3D đầy đủ). Không còn alias
+                            // phím mũi tên nữa vì mũi tên giờ dành riêng cho nudge asset đang chọn.
                             const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(this.el.object3D.quaternion);
                             const right = new THREE.Vector3(1, 0, 0).applyQuaternion(this.el.object3D.quaternion);
 
-                            if (this.keys['w'] || this.keys['arrowup']) {
+                            if (this.keys['w']) {
                                 position.x += forward.x * speed;
                                 position.y += forward.y * speed;
                                 position.z += forward.z * speed;
                                 moved = true;
                             }
-                            if (this.keys['s'] || this.keys['arrowdown']) {
+                            if (this.keys['s']) {
                                 position.x -= forward.x * speed;
                                 position.y -= forward.y * speed;
                                 position.z -= forward.z * speed;
                                 moved = true;
                             }
-                            if (this.keys['a'] || this.keys['arrowleft']) {
+                            if (this.keys['a']) {
                                 position.x -= right.x * speed;
                                 position.y -= right.y * speed;
                                 position.z -= right.z * speed;
                                 moved = true;
                             }
-                            if (this.keys['d'] || this.keys['arrowright']) {
+                            if (this.keys['d']) {
                                 position.x += right.x * speed;
                                 position.y += right.y * speed;
                                 position.z += right.z * speed;
@@ -335,10 +591,15 @@ export function useAframeScript(): boolean {
                             if (moved) this.el.setAttribute('position', position);
                         },
                         remove: function (this: any) {
-                            window.removeEventListener('keydown', this.onKeyDown);
+                            window.removeEventListener('keydown', this.onKeyDown, true);
                             window.removeEventListener('keyup', this.onKeyUp);
                             window.removeEventListener('blur', this.onBlur);
                             document.removeEventListener('visibilitychange', this.onBlur);
+                            this.el.sceneEl.removeEventListener('mousedown', this.onMouseDown);
+                            this.el.sceneEl.removeEventListener('wheel', this.onWheel);
+                            this.el.sceneEl.removeEventListener('contextmenu', this.onContextMenu);
+                            window.removeEventListener('mousemove', this.onMouseMove);
+                            window.removeEventListener('mouseup', this.onMouseUp);
                         }
                     });
                 }

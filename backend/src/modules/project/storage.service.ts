@@ -80,6 +80,44 @@ export class StorageService {
     throw new BadRequestException('Failed to generate public URL for uploaded file');
   }
 
+  /**
+   * Copy 1 file đã có trong bucket sang 1 storageKey mới (dùng cho tính năng
+   * duplicate asset) — copy ở phía server của Supabase, không cần tải bytes
+   * về rồi upload lại, nên nhanh và không tốn băng thông app server.
+   */
+  async copyFile(
+    sourceStorageKey: string,
+    projectId: string,
+    originalFilename: string
+  ): Promise<{ url: string; storageKey: string }> {
+    if (!this.supabase) {
+      throw new BadRequestException('Supabase Storage is not configured. Please check environment variables.');
+    }
+
+    const fileExt = path.extname(originalFilename);
+    const uniqueFilename = `${projectId}-${Date.now()}-copy${fileExt}`;
+    const destStorageKey = `assets/${projectId}/${uniqueFilename}`;
+
+    const { error } = await this.supabase.storage
+      .from('assets')
+      .copy(sourceStorageKey, destStorageKey);
+
+    if (error) {
+      this.logger.error(`Supabase copy error: ${error.message}`);
+      throw new BadRequestException(`Duplicate failed: ${error.message}`);
+    }
+
+    const { data: urlData } = this.supabase.storage
+      .from('assets')
+      .getPublicUrl(destStorageKey);
+
+    if (!urlData?.publicUrl) {
+      throw new BadRequestException('Failed to generate public URL for duplicated file');
+    }
+
+    return { url: urlData.publicUrl, storageKey: destStorageKey };
+  }
+
   async deleteFile(storageKey: string): Promise<void> {
     if (!this.supabase) {
       this.logger.warn('Supabase is not configured. Skipping delete.');

@@ -7,6 +7,7 @@ interface UseAssetActionsParams {
     activeAsset: Asset | null;
     onDeleted: (assetId: string) => void;
     onActiveAssetCleared: () => void;
+    onDuplicated?: (newAsset: Asset) => void;
 }
 
 export function useAssetActions({
@@ -14,11 +15,15 @@ export function useAssetActions({
     activeAsset,
     onDeleted,
     onActiveAssetCleared,
+    onDuplicated,
 }: UseAssetActionsParams) {
     const { token, authFetch } = useAuth();
 
-    const handleDeleteAsset = async (assetId: string, e: React.MouseEvent) => {
-        e.stopPropagation();
+    // `e` optional — nút X trong sidebar gọi kèm MouseEvent (cần stopPropagation để
+    // không kích hoạt luôn onClick chọn asset của item cha), còn phím tắt (Delete/Backspace)
+    // gọi thẳng không có event chuột nào cả.
+    const handleDeleteAsset = async (assetId: string, e?: React.MouseEvent) => {
+        e?.stopPropagation();
         if (!token || !id) return;
 
         if (!window.confirm('Are you sure you want to delete this asset?')) return;
@@ -40,5 +45,23 @@ export function useAssetActions({
         }
     };
 
-    return { handleDeleteAsset };
+    const handleDuplicateAsset = async (assetId: string) => {
+        if (!token || !id) return;
+
+        try {
+            const response = await authFetch(`${API_URL}/projects/${id}/assets/${assetId}/duplicate`, {
+                method: 'POST',
+            });
+
+            if (!response.ok) throw new Error('Failed to duplicate asset');
+
+            const newAsset: Asset = await response.json();
+            onDuplicated?.(newAsset);
+        } catch (err: any) {
+            console.error(err);
+            alert('Failed to duplicate asset.');
+        }
+    };
+
+    return { handleDeleteAsset, handleDuplicateAsset };
 }

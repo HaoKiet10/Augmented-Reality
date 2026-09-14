@@ -43,6 +43,16 @@ export class AssetController {
     return this.assetService.addAsset(id, req.user.id, file);
   }
 
+  @Post(':assetId/duplicate')
+  @UseGuards(JwtAuthGuard)
+  async duplicateAsset(
+    @Param('id') id: string,
+    @Param('assetId') assetId: string,
+    @Req() req: any
+  ) {
+    return this.assetService.duplicateAsset(id, assetId, req.user.id);
+  }
+
   @Delete(':assetId')
   @UseGuards(JwtAuthGuard)
   async deleteAsset(

@@ -55,6 +55,21 @@ export class AssetService {
     });
   }
 
+  private async assertWithinSizeLimit(projectId: string, additionalBytes: number) {
+    const assets = await this.prisma.asset.findMany({
+      where: { projectId },
+      select: { fileSize: true },
+    });
+
+    const currentTotalSize = assets.reduce((sum, asset) => sum + asset.fileSize, 0);
+
+    if (currentTotalSize + additionalBytes > MAX_LIMIT) {
+      throw new BadRequestException(
+        `Project asset limit exceeded. Maximum 5MB allowed per project. (Current: ${(currentTotalSize / (1024 * 1024)).toFixed(2)}MB, New file: ${(additionalBytes / (1024 * 1024)).toFixed(2)}MB)`
+      );
+    }
+  }
+
   async addAsset(projectId: string, designerId: string, file: Express.Multer.File) {
     await this.projectService.findOne(projectId, designerId); // Verify access
 
@@ -62,20 +77,8 @@ export class AssetService {
     // client tự khai báo, vì fileFilter ở multer chỉ chặn được lớp ngoài dễ giả mạo.
     validateUploadedFile(file, ALLOWED_ASSET_TYPES);
 
-    // 1. Calculate current project size
-    const assets = await this.prisma.asset.findMany({
-      where: { projectId },
-      select: { fileSize: true },
-    });
-
-    const currentTotalSize = assets.reduce((sum, asset) => sum + asset.fileSize, 0);
-    const newFileSize = file.size;
-
-    if (currentTotalSize + newFileSize > MAX_LIMIT) {
-      throw new BadRequestException(
-        `Project asset limit exceeded. Maximum 5MB allowed per project. (Current: ${(currentTotalSize / (1024 * 1024)).toFixed(2)}MB, New file: ${(newFileSize / (1024 * 1024)).toFixed(2)}MB)`
-      );
-    }
+    // 1. Kiểm tra giới hạn dung lượng project
+    await this.assertWithinSizeLimit(projectId, file.size);
 
     // 2. Upload file
     const { url, storageKey } = await this.storageService.uploadFile(file, projectId);
@@ -112,6 +115,61 @@ export class AssetService {
     });
 
     // 4. Update lastOpenedAt on the project
+    await this.prisma.project.update({
+      where: { id: projectId },
+      data: { lastOpenedAt: new Date() },
+    });
+
+    return asset;
+  }
+
+  /** Nhân bản 1 asset: copy file trong storage (không tốn băng thông app server) + tạo record DB mới. */
+  async duplicateAsset(projectId: string, assetId: string, designerId: string) {
+    await this.projectService.findOne(projectId, designerId); // Verify access
+
+    const original = await this.prisma.asset.findFirst({
+      where: { id: assetId, projectId },
+    });
+
+    if (!original) {
+      throw new NotFoundException(`Asset not found in this project`);
+    }
+
+    await this.assertWithinSizeLimit(projectId, original.fileSize);
+
+    const { url, storageKey } = await this.storageService.copyFile(
+      original.storageKey,
+      projectId,
+      original.filename
+    );
+
+    // Lệch nhẹ vị trí bản sao so với bản gốc (theo cùng quy ước jitter tương đối
+    // như generateDefaultTransform) để 2 asset không chồng khít lên nhau.
+    const originalTransform = (original.transform as unknown as AssetTransform) ?? generateDefaultTransform();
+    const duplicatedTransform: AssetTransform = {
+      ...originalTransform,
+      position: {
+        x: originalTransform.position.x + 0.15,
+        y: originalTransform.position.y,
+        z: originalTransform.position.z + 0.15,
+      },
+    };
+
+    const asset = await this.prisma.asset.create({
+      data: {
+        filename: original.filename,
+        fileType: original.fileType,
+        fileSize: original.fileSize,
+        storageKey,
+        url,
+        width: original.width,
+        height: original.height,
+        transform: duplicatedTransform as any,
+        projectId,
+        uploadedBy: designerId,
+      },
+    });
+
     await this.prisma.project.update({
       where: { id: projectId },
       data: { lastOpenedAt: new Date() },

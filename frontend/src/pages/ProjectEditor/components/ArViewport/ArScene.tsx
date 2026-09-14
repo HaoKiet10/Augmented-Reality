@@ -1,4 +1,4 @@
-import { useState, memo } from 'react';
+import { useState, memo, Fragment } from 'react';
 import { Entity, Scene } from 'aframe-react';
 import type { Asset } from '../../types';
 import { isImageAsset, isVideoAsset } from '../../utils/assetType';
@@ -27,9 +27,56 @@ const CameraRig = memo(function CameraRig() {
         <Entity
             primitive="a-camera"
             position="0 1.6 0"
-            look-controls="enabled: true"
+            wasd-controls="enabled: false"
+            look-controls="enabled: false"
             free-fly-controls="speed: 0.08"
         />
+    );
+});
+
+/**
+ * 3 mũi tên kéo theo từng trục thế giới (X đỏ, Y xanh lá, Z xanh dương) — hiện khi asset
+ * đang được chọn. Render như SIBLING của asset (không phải con bên trong entity đã bị
+ * rotate/scale theo transform của asset) để trục luôn thẳng theo world-space tuyệt đối,
+ * không bị xoay/lệch theo rotation riêng của asset.
+ */
+const AxisGizmo = memo(function AxisGizmo({
+    position,
+    onDrag,
+}: {
+    position: { x: number; y: number; z: number };
+    onDrag: (position: { x: number; y: number; z: number }) => void;
+}) {
+    const ARM_LENGTH = 0.35;
+    return (
+        <Entity
+            position={vectorToString(position)}
+            events={{ axisdragposition: (e: any) => onDrag(e.detail) }}
+        >
+            {/* Trục X — đỏ */}
+            <Entity
+                axis-handle="axis: x; color: #ef4444"
+                geometry={`primitive: cylinder; radius: 0.035; height: ${ARM_LENGTH}`}
+                material="shader: flat"
+                rotation="0 0 -90"
+                position={`${ARM_LENGTH / 2} 0 0`}
+            />
+            {/* Trục Y — xanh lá */}
+            <Entity
+                axis-handle="axis: y; color: #22c55e"
+                geometry={`primitive: cylinder; radius: 0.035; height: ${ARM_LENGTH}`}
+                material="shader: flat"
+                position={`0 ${ARM_LENGTH / 2} 0`}
+            />
+            {/* Trục Z — xanh dương */}
+            <Entity
+                axis-handle="axis: z; color: #3b82f6"
+                geometry={`primitive: cylinder; radius: 0.035; height: ${ARM_LENGTH}`}
+                material="shader: flat"
+                rotation="90 0 0"
+                position={`0 0 ${ARM_LENGTH / 2}`}
+            />
+        </Entity>
     );
 });
 
@@ -71,8 +118,16 @@ function AssetEntity({
         rotation: vectorToString(transform.rotation),
         scale: vectorToString(transform.scale),
         'draggable-object': '',
+        'data-selected': isSelected ? 'true' : 'false',
         events: {
-            click: onSelect,
+            click: (e: any) => {
+                // Cursor component của A-Frame bắn 'click' bất kể nút chuột nào (kể cả phải/giữa) —
+                // chỉ nhận click THẬT từ chuột trái (hoặc chạm, không có mouseEvent) để chọn asset;
+                // chuột phải chỉ dùng để xoay camera, không được phép chọn/ảnh hưởng gì tới asset.
+                const button = e.detail?.mouseEvent?.button;
+                if (typeof button === 'number' && button !== 0) return;
+                onSelect();
+            },
             dragstart: () => {
                 // Chọn asset ngay khi bắt đầu kéo, không chờ sự kiện 'click' lúc buông chuột —
                 // A-Frame chỉ bắn 'click' nếu entity bị raycaster trỏ tới lúc buông TRÙNG với
@@ -125,7 +180,13 @@ export function ArScene({ assets, activeAssetId, onSelectAsset, onDragAsset, onS
     const [draggingId, setDraggingId] = useState<string | null>(null);
 
     return (
-        <Scene embedded className="w-full h-full" vr-mode-ui="enabled: false" cursor="rayOrigin: mouse">
+        <Scene
+            embedded
+            className="w-full h-full"
+            vr-mode-ui="enabled: false"
+            cursor="rayOrigin: mouse"
+            onContextMenu={(e: React.MouseEvent) => e.preventDefault()}
+        >
             {/* <a-assets> phải là con TRỰC TIẾP của <a-scene>, không bọc div ngoài.
           A-Frame tự ẩn nó, không cần display:none thủ công. */}
             <a-assets>
@@ -152,19 +213,27 @@ export function ArScene({ assets, activeAssetId, onSelectAsset, onDragAsset, onS
             <Entity light="type: directional; color: #FFF; intensity: 0.6" position="-0.5 1 1" />
 
             {/* Render TẤT CẢ assets cùng lúc, mỗi cái với transform riêng */}
-            {assets.map((asset) => (
-                <AssetEntity
-                    key={asset.id}
-                    asset={asset}
-                    isSelected={asset.id === activeAssetId}
-                    onSelect={() => onSelectAsset(asset.id)}
-                    onDragPosition={(pos) => onDragAsset(asset.id, pos)}
-                    onDragStart={() => setDraggingId(asset.id)}
-                    onDragEnd={() => setDraggingId(null)}
-                    isDragging={asset.id === draggingId}
-                    onScale={(scale) => onScaleAsset(asset.id, scale)}
-                />
-            ))}
+            {assets.map((asset) => {
+                const isSelected = asset.id === activeAssetId;
+                const transform = asset.transform ?? DEFAULT_SPATIAL_CONFIG;
+                return (
+                    <Fragment key={asset.id}>
+                        <AssetEntity
+                            asset={asset}
+                            isSelected={isSelected}
+                            onSelect={() => onSelectAsset(asset.id)}
+                            onDragPosition={(pos) => onDragAsset(asset.id, pos)}
+                            onDragStart={() => setDraggingId(asset.id)}
+                            onDragEnd={() => setDraggingId(null)}
+                            isDragging={asset.id === draggingId}
+                            onScale={(scale) => onScaleAsset(asset.id, scale)}
+                        />
+                        {isSelected && (
+                            <AxisGizmo position={transform.position} onDrag={(pos) => onDragAsset(asset.id, pos)} />
+                        )}
+                    </Fragment>
+                );
+            })}
 
             {/* Grid indicator to help align */}
             <Entity position="0 0.01 0" rotation="90 0 0" className="grid-helper">

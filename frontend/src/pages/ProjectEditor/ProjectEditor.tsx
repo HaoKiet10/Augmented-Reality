@@ -8,6 +8,7 @@ import { useProjectData } from './hooks/useProjectData';
 import { useAssetTransform } from './hooks/useAssetTransform';
 import { useAssetUpload } from './hooks/useAssetUpload';
 import { useAssetActions } from './hooks/useAssetActions';
+import { useAssetKeyboardShortcuts } from './hooks/useAssetKeyboardShortcuts';
 import { useSpatialSave } from './hooks/useSpatialSave';
 import { useProjectRename } from './hooks/useProjectRename';
 
@@ -104,11 +105,24 @@ export const ProjectEditor: React.FC = () => {
         onError: (message) => setError(message || null),
     });
 
-    const { handleDeleteAsset } = useAssetActions({
+    const { handleDeleteAsset, handleDuplicateAsset } = useAssetActions({
         id,
         activeAsset,
         onDeleted: (assetId) => setAssets((prev) => prev.filter((a) => a.id !== assetId)),
         onActiveAssetCleared: () => setActiveAsset(null),
+        onDuplicated: (newAsset) => {
+            setAssets((prev) => [newAsset, ...prev]);
+            setActiveAsset(newAsset);
+        },
+    });
+
+    useAssetKeyboardShortcuts({
+        assets,
+        activeAsset,
+        onSelectAsset: setActiveAsset,
+        onTransformChange: updateAssetTransform,
+        onDeleteAsset: handleDeleteAsset,
+        onDuplicateAsset: handleDuplicateAsset,
     });
 
     const { saveStatus, handleSaveConfig, saveTransform } = useSpatialSave({ id, activeAsset });
@@ -131,7 +145,10 @@ export const ProjectEditor: React.FC = () => {
     }
 
     return (
-        <div className="relative h-screen bg-[#0d0e12] flex flex-col text-white font-sans overflow-hidden">
+        <div
+            className="relative h-screen bg-[#0d0e12] flex flex-col text-white font-sans overflow-hidden"
+            onContextMenu={(e) => e.preventDefault()}
+        >
             <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-500/5 rounded-full filter blur-[120px] pointer-events-none"></div>
 
             <EditorHeader
