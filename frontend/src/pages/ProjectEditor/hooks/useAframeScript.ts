@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { isTypingInField } from '../utils/keyboard';
 
 /**
  * Với aframe-react, A-Frame core được import trực tiếp từ package `aframe`
@@ -397,6 +398,10 @@ export function useAframeScript(): boolean {
                         },
                         init: function (this: any) {
                             this.keys = {};
+                            // Mốc thời gian keydown (thật, có auto-repeat) gần nhất của từng phím —
+                            // dùng để "watchdog" phát hiện phím bị kẹt true mãi mãi, xem chi tiết
+                            // trong tick() và onCompositionStart/onCompositionEnd bên dưới.
+                            this.lastKeyTime = {};
 
                             // Yaw/pitch (độ) — thay thế look-controls built-in của A-Frame.
                             // Khởi tạo từ rotation attribute hiện tại để không bị giật khi bắt đầu kéo.
@@ -411,6 +416,7 @@ export function useAframeScript(): boolean {
                             this.onKeyDown = this.onKeyDown.bind(this);
                             this.onKeyUp = this.onKeyUp.bind(this);
                             this.onBlur = this.onBlur.bind(this);
+                            this.onComposition = this.onComposition.bind(this);
                             this.onMouseDown = this.onMouseDown.bind(this);
                             this.onMouseMove = this.onMouseMove.bind(this);
                             this.onMouseUp = this.onMouseUp.bind(this);
@@ -435,6 +441,16 @@ export function useAframeScript(): boolean {
                             window.addEventListener('blur', this.onBlur);
                             document.addEventListener('visibilitychange', this.onBlur);
 
+                            // Bộ gõ tiếng Việt (Unikey/EVKey kiểu Telex) can thiệp vào chuỗi phím
+                            // trong lúc IME đang "compose" 1 ký tự (vd. gõ 'w' để ra chữ "ư" — xem
+                            // chú thích ở onKeyDown về Backspace, cùng gốc vấn đề). Trong lúc đó,
+                            // trình duyệt có thể không bắn đúng cặp keydown/keyup thật cho phím vật
+                            // lý đang giữ (composition "nuốt" mất keyup) -> this.keys[phím] mắc kẹt
+                            // ở true mãi mãi dù tay đã buông từ lâu -> camera trôi liên tục theo
+                            // hướng phím đó. Reset sạch mỗi khi 1 phiên compose bắt đầu/kết thúc.
+                            window.addEventListener('compositionstart', this.onComposition);
+                            window.addEventListener('compositionend', this.onComposition);
+
                             // mousedown/wheel/contextmenu gắn trên <a-scene> (không phải canvas trực tiếp)
                             // vì canvas có thể chưa tồn tại lúc component này init — event từ canvas vẫn
                             // bubble lên tới sceneEl bình thường. mousemove/mouseup gắn trên window để vẫn
@@ -446,6 +462,16 @@ export function useAframeScript(): boolean {
                             window.addEventListener('mouseup', this.onMouseUp);
                         },
                         onKeyDown: function (this: any, e: KeyboardEvent) {
+                            // Đang gõ trong 1 field thật (input đổi tên, ô số Inspector...) -> bỏ
+                            // qua HOÀN TOÀN, không preventDefault/không set this.keys. Quan trọng
+                            // nhất với bộ gõ tiếng Việt Telex: 'w', 's', 'd', 'e' là các phím ghép
+                            // dấu/ký tự (ư/ơ, dấu sắc, đ, ê...) được gõ liên tục khi soạn tiếng Việt
+                            // — nếu không loại trừ ở đây, free-fly-controls sẽ cướp các phím đó làm
+                            // lệnh bay camera ngay giữa lúc gõ chữ, vừa phá nội dung đang nhập vừa
+                            // dễ để lại phím bị kẹt true nếu bộ gõ không phát cặp keydown/keyup chuẩn
+                            // lúc đang ghép dấu — đây chính là nguyên nhân camera trôi khi gõ tiếng Việt.
+                            if (isTypingInField(e.target) || isTypingInField(document.activeElement)) return;
+
                             const key = e.key.toLowerCase();
                             const HANDLED_KEYS = [' ', 'w', 'a', 's', 'd', 'e', 'q', 'f'];
                             // e.key của "Ctrl+D" vẫn chỉ là 'd' (Ctrl không đổi giá trị e.key, chỉ set
@@ -461,14 +487,25 @@ export function useAframeScript(): boolean {
                                 e.preventDefault();
                                 e.stopPropagation();
                                 this.keys[key] = true;
+                                this.lastKeyTime[key] = performance.now();
                                 if (key === 'f') this.focusOnSelected();
                             }
                         },
                         onKeyUp: function (this: any, e: KeyboardEvent) {
-                            this.keys[e.key.toLowerCase()] = false;
+                            const key = e.key.toLowerCase();
+                            this.keys[key] = false;
+                            delete this.lastKeyTime[key];
                         },
                         onBlur: function (this: any) {
                             this.keys = {};
+                            this.lastKeyTime = {};
+                        },
+                        // Xem chú thích ở nơi đăng ký listener (init) — reset cứng mỗi khi 1 phiên
+                        // IME compose bắt đầu hoặc kết thúc, phòng trường hợp bộ gõ tiếng Việt
+                        // nuốt mất keyup thật của phím đang giữ.
+                        onComposition: function (this: any) {
+                            this.keys = {};
+                            this.lastKeyTime = {};
                         },
                         // Chuột phải + kéo = xoay góc nhìn (thay cho look-controls built-in, vốn xoay
                         // theo chuột trái — trái giờ dành riêng cho chọn/kéo asset). Bấm phải lên asset
@@ -549,6 +586,21 @@ export function useAframeScript(): boolean {
                         },
                         tick: function (this: any, _time: number, timeDelta: number) {
                             if (!this.data.enabled) return;
+
+                            // Watchdog: 1 phím giữ THẬT sẽ liên tục bắn keydown lặp lại (auto-repeat
+                            // của OS/trình duyệt, thường mỗi vài chục ms sau độ trễ ban đầu ~500-700ms).
+                            // Nếu quá STALE_MS mà không thấy keydown mới cho phím đang "true", coi như
+                            // keyup thật đã bị nuốt mất (IME tiếng Việt đang compose, extension trình
+                            // duyệt, tab mất focus theo cách không bắn 'blur'...) và tự nhả phím đó —
+                            // tránh camera trôi liên tục theo 1 hướng mà không ai giữ phím nữa.
+                            const STALE_MS = 700;
+                            const now = performance.now();
+                            for (const k in this.keys) {
+                                if (this.keys[k] && now - (this.lastKeyTime[k] || 0) > STALE_MS) {
+                                    this.keys[k] = false;
+                                }
+                            }
+
                             // Giữ Shift = tăng tốc bay (boost), không còn dùng Shift làm phím "xuống" nữa.
                             const boost = this.keys['shift'] ? 2.5 : 1;
                             const speed = this.data.speed * boost * (timeDelta / 16.6);
@@ -601,6 +653,8 @@ export function useAframeScript(): boolean {
                             window.removeEventListener('keyup', this.onKeyUp);
                             window.removeEventListener('blur', this.onBlur);
                             document.removeEventListener('visibilitychange', this.onBlur);
+                            window.removeEventListener('compositionstart', this.onComposition);
+                            window.removeEventListener('compositionend', this.onComposition);
                             this.el.sceneEl.removeEventListener('mousedown', this.onMouseDown);
                             this.el.sceneEl.removeEventListener('wheel', this.onWheel);
                             this.el.sceneEl.removeEventListener('contextmenu', this.onContextMenu);

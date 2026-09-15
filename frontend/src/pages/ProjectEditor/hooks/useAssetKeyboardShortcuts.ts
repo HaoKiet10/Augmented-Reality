@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import type { Asset, AssetTransform } from '../types';
 import { DEFAULT_SPATIAL_CONFIG } from '../constants';
+import { isTypingInField } from '../utils/keyboard';
 
 interface UseAssetKeyboardShortcutsParams {
     assets: Asset[];
@@ -19,12 +20,6 @@ interface UseAssetKeyboardShortcutsParams {
 // backend) — 0.01 ~ 1% chiều rộng marker, 0.05 ~ 5% khi giữ Shift để nhích nhanh hơn.
 const NUDGE_STEP = 0.01;
 const NUDGE_STEP_FAST = 0.05;
-
-function isTypingInField(target: EventTarget | null): boolean {
-    if (!(target instanceof HTMLElement)) return false;
-    const tag = target.tagName;
-    return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target.isContentEditable;
-}
 
 /**
  * Phím tắt thao tác asset trong màn Design:
