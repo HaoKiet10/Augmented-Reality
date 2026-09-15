@@ -10,7 +10,7 @@ import { useAssetUpload } from './hooks/useAssetUpload';
 import { useAssetActions } from './hooks/useAssetActions';
 import { useAssetKeyboardShortcuts } from './hooks/useAssetKeyboardShortcuts';
 import { useUndoRedo } from './hooks/useUndoRedo';
-import { useAutosave } from './hooks/useAutosave';
+import { useAutosave } from './hooks/useAutoSave';
 import { useSpatialSave } from './hooks/useSpatialSave';
 import { useProjectRename } from './hooks/useProjectRename';
 
