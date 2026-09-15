@@ -22,7 +22,7 @@ export class ProjectService {
     const project = await this.prisma.project.findFirst({
       where: { id, designerId },
       include: {
-        assets: true,
+        assets: { where: { deletedAt: null } },
       },
     });
     if (!project) {
@@ -54,8 +54,13 @@ export class ProjectService {
   async delete(id: string, designerId: string) {
     const project = await this.findOne(id, designerId);
 
+    // Dọn dẹp storage cần lấy TẤT CẢ asset kể cả đã soft-delete (findOne() ở trên lọc bỏ chúng
+    // vì đó là điều đúng cho mọi chỗ khác) — xoá cả project thì file vật lý của asset đã soft-delete
+    // trước đó cũng phải dọn theo, nếu không sẽ mồ côi vĩnh viễn trong storage.
+    const allAssets = await this.prisma.asset.findMany({ where: { projectId: id } });
+
     // Clean up all associated assets from storage first
-    for (const asset of project.assets) {
+    for (const asset of allAssets) {
       try {
         await this.storageService.deleteFile(asset.storageKey);
       } catch (err) {
@@ -184,6 +189,7 @@ export class ProjectService {
       where: { id, status: 'published' },
       include: {
         assets: {
+          where: { deletedAt: null },
           select: {
             id: true,
             filename: true,

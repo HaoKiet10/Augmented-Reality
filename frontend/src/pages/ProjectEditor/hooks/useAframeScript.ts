@@ -448,15 +448,21 @@ export function useAframeScript(): boolean {
                         onKeyDown: function (this: any, e: KeyboardEvent) {
                             const key = e.key.toLowerCase();
                             const HANDLED_KEYS = [' ', 'w', 'a', 's', 'd', 'e', 'q', 'f'];
-                            if (HANDLED_KEYS.includes(key)) {
+                            // e.key của "Ctrl+D" vẫn chỉ là 'd' (Ctrl không đổi giá trị e.key, chỉ set
+                            // thêm flag ctrlKey) — nếu không loại trừ tổ hợp phím ở đây, Ctrl+D (nhân bản),
+                            // Ctrl+S (lưu)... sẽ bị nhận nhầm thành WASD di chuyển camera, và vì listener
+                            // này chạy ở capture phase nên nó stopPropagation() TRƯỚC khi phím tắt thật sự
+                            // (ở useAssetKeyboardShortcuts, bubble phase) kịp nhận được sự kiện.
+                            const hasModifier = e.ctrlKey || e.metaKey || e.altKey;
+                            if (!hasModifier && HANDLED_KEYS.includes(key)) {
                                 // preventDefault: chặn hành vi mặc định của trình duyệt (Space cuộn trang...).
                                 // stopPropagation: chặn listener khác (nếu có) cũng đang nghe đúng phím này ở
                                 // pha bubble phía sau — đây là fix cho lỗi F bị đè lên fullscreen.
                                 e.preventDefault();
                                 e.stopPropagation();
+                                this.keys[key] = true;
+                                if (key === 'f') this.focusOnSelected();
                             }
-                            this.keys[key] = true;
-                            if (key === 'f') this.focusOnSelected();
                         },
                         onKeyUp: function (this: any, e: KeyboardEvent) {
                             this.keys[e.key.toLowerCase()] = false;

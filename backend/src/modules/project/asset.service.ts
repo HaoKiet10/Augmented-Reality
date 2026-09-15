@@ -20,10 +20,6 @@ interface AssetTransform {
 }
 
 /**
- * Sinh transform mặc định cho asset mới, lệch nhẹ ngẫu nhiên trên trục X/Z
- * để các asset không bị chồng lên nhau khi cùng active trong scene.
- */
-/**
  * Transform mặc định cho asset mới, theo quy ước TỈ LỆ TƯƠNG ĐỐI so với chiều
  * rộng trigger image (1 = 100% chiều rộng marker) — KHÔNG phải mét tuyệt đối.
  * Đặt ở giữa marker (position 0,0,0), lệch nhẹ ngẫu nhiên trên trục X/Z để
@@ -50,14 +46,14 @@ export class AssetService {
   async getAssets(projectId: string, designerId: string) {
     await this.projectService.findOne(projectId, designerId); // Verify access
     return this.prisma.asset.findMany({
-      where: { projectId },
+      where: { projectId, deletedAt: null },
       orderBy: { createdAt: 'desc' },
     });
   }
 
   private async assertWithinSizeLimit(projectId: string, additionalBytes: number) {
     const assets = await this.prisma.asset.findMany({
-      where: { projectId },
+      where: { projectId, deletedAt: null }, // asset đã soft-delete không tính vào hạn mức nữa
       select: { fileSize: true },
     });
 
@@ -128,7 +124,7 @@ export class AssetService {
     await this.projectService.findOne(projectId, designerId); // Verify access
 
     const original = await this.prisma.asset.findFirst({
-      where: { id: assetId, projectId },
+      where: { id: assetId, projectId, deletedAt: null },
     });
 
     if (!original) {
@@ -178,32 +174,52 @@ export class AssetService {
     return asset;
   }
 
+  /**
+   * Soft-delete: chỉ đánh dấu `deletedAt`, KHÔNG đụng gì tới file vật lý trong storage lẫn DB
+   * record — nhờ vậy `restoreAsset` bên dưới luôn phục hồi được 100%, bất kể đã bao lâu hay đã
+   * autosave bao nhiêu lần từ lúc xoá. File vật lý chỉ thật sự biến mất nếu sau này có thêm job
+   * dọn rác định kỳ purge những asset đã deletedAt quá X ngày (chưa có — hiện giữ vô thời hạn).
+   */
   async deleteAsset(projectId: string, assetId: string, designerId: string) {
     await this.projectService.findOne(projectId, designerId); // Verify access
 
     const asset = await this.prisma.asset.findFirst({
-      where: { id: assetId, projectId },
+      where: { id: assetId, projectId, deletedAt: null },
     });
 
     if (!asset) {
       throw new NotFoundException(`Asset not found in this project`);
     }
 
-    // Delete physical file
-    await this.storageService.deleteFile(asset.storageKey);
-
-    // Delete DB record
-    await this.prisma.asset.delete({
+    await this.prisma.asset.update({
       where: { id: assetId },
+      data: { deletedAt: new Date() },
     });
 
-    // Update lastOpenedAt on the project
     await this.prisma.project.update({
       where: { id: projectId },
       data: { lastOpenedAt: new Date() },
     });
 
     return { success: true };
+  }
+
+  /** Undo xoá — gỡ `deletedAt`, asset trở lại bình thường ngay lập tức. */
+  async restoreAsset(projectId: string, assetId: string, designerId: string) {
+    await this.projectService.findOne(projectId, designerId); // Verify access
+
+    const asset = await this.prisma.asset.findFirst({
+      where: { id: assetId, projectId, deletedAt: { not: null } },
+    });
+
+    if (!asset) {
+      throw new NotFoundException(`Deleted asset not found in this project`);
+    }
+
+    return this.prisma.asset.update({
+      where: { id: assetId },
+      data: { deletedAt: null },
+    });
   }
 
   /** Cập nhật transform (position/rotation/scale) cho 1 asset cụ thể */
@@ -216,7 +232,7 @@ export class AssetService {
     await this.projectService.findOne(projectId, designerId); // Verify access
 
     const asset = await this.prisma.asset.findFirst({
-      where: { id: assetId, projectId },
+      where: { id: assetId, projectId, deletedAt: null },
     });
 
     if (!asset) {

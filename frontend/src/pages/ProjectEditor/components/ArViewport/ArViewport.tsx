@@ -10,9 +10,10 @@ interface ArViewportProps {
     onSelectAsset: (assetId: string) => void;
     onDragAsset: (assetId: string, position: { x: number; y: number; z: number }) => void;
     onScaleAsset: (assetId: string, scale: { x: number; y: number; z: number }) => void;
+    onBeforeTransformChange: () => void;
 }
 
-export function ArViewport({ aframeLoaded, assets, activeAssetId, onSelectAsset, onDragAsset, onScaleAsset }: ArViewportProps) {
+export function ArViewport({ aframeLoaded, assets, activeAssetId, onSelectAsset, onDragAsset, onScaleAsset, onBeforeTransformChange }: ArViewportProps) {
     const activeAsset = assets.find((a) => a.id === activeAssetId) ?? null;
 
     return (
@@ -41,6 +42,7 @@ export function ArViewport({ aframeLoaded, assets, activeAssetId, onSelectAsset,
                         onSelectAsset={onSelectAsset}
                         onDragAsset={onDragAsset}
                         onScaleAsset={onScaleAsset}
+                        onBeforeTransformChange={onBeforeTransformChange}
                     />
                     {activeAsset && <ArStatusBadge activeAsset={activeAsset} />}
                 </div>

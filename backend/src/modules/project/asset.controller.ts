@@ -63,6 +63,16 @@ export class AssetController {
     return this.assetService.deleteAsset(id, assetId, req.user.id);
   }
 
+  @Post(':assetId/restore')
+  @UseGuards(JwtAuthGuard)
+  async restoreAsset(
+    @Param('id') id: string,
+    @Param('assetId') assetId: string,
+    @Req() req: any
+  ) {
+    return this.assetService.restoreAsset(id, assetId, req.user.id);
+  }
+
   @Patch(':assetId/transform')
   @UseGuards(JwtAuthGuard)
   async updateAssetTransform(

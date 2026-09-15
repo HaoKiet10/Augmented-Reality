@@ -10,6 +10,7 @@ interface ArSceneProps {
     onSelectAsset: (assetId: string) => void;
     onDragAsset: (assetId: string, position: { x: number; y: number; z: number }) => void;
     onScaleAsset: (assetId: string, scale: { x: number; y: number; z: number }) => void;
+    onBeforeTransformChange: () => void;
 }
 
 function vectorToString(v: { x: number; y: number; z: number }) {
@@ -43,15 +44,20 @@ const CameraRig = memo(function CameraRig() {
 const AxisGizmo = memo(function AxisGizmo({
     position,
     onDrag,
+    onBeforeChange,
 }: {
     position: { x: number; y: number; z: number };
     onDrag: (position: { x: number; y: number; z: number }) => void;
+    onBeforeChange: () => void;
 }) {
     const ARM_LENGTH = 0.35;
     return (
         <Entity
             position={vectorToString(position)}
-            events={{ axisdragposition: (e: any) => onDrag(e.detail) }}
+            events={{
+                axisdragstart: onBeforeChange,
+                axisdragposition: (e: any) => onDrag(e.detail),
+            }}
         >
             {/* Trục X — đỏ */}
             <Entity
@@ -89,6 +95,7 @@ function AssetEntity({
     onDragEnd,
     isDragging,
     onScale,
+    onBeforeChange,
 }: {
     asset: Asset;
     isSelected: boolean;
@@ -98,6 +105,7 @@ function AssetEntity({
     onDragEnd: () => void;
     isDragging: boolean;
     onScale: (scale: { x: number; y: number; z: number }) => void;
+    onBeforeChange: () => void;
 }) {
     const isVideo = isVideoAsset(asset.fileType, asset.filename);
     const isImage = isImageAsset(asset.fileType, asset.filename);
@@ -136,9 +144,11 @@ function AssetEntity({
                 // không được chọn, vòng tròn bị "kẹt" ở asset đã chọn trước đó.
                 onSelect();
                 onDragStart();
+                onBeforeChange(); // chốt snapshot undo TRƯỚC khi vị trí bắt đầu thay đổi
             },
             dragposition: (e: any) => onDragPosition(e.detail),
             dragend: onDragEnd,
+            scalestart: onBeforeChange, // trước đây 'scalestart' hoàn toàn chưa được lắng nghe ở đây
             scalevalue: (e: any) => onScale(e.detail),
         }
     };
@@ -175,7 +185,7 @@ function AssetEntity({
     );
 }
 
-export function ArScene({ assets, activeAssetId, onSelectAsset, onDragAsset, onScaleAsset }: ArSceneProps) {
+export function ArScene({ assets, activeAssetId, onSelectAsset, onDragAsset, onScaleAsset, onBeforeTransformChange }: ArSceneProps) {
     const videoAssets = assets.filter((a) => isVideoAsset(a.fileType, a.filename));
     const [draggingId, setDraggingId] = useState<string | null>(null);
 
@@ -227,9 +237,14 @@ export function ArScene({ assets, activeAssetId, onSelectAsset, onDragAsset, onS
                             onDragEnd={() => setDraggingId(null)}
                             isDragging={asset.id === draggingId}
                             onScale={(scale) => onScaleAsset(asset.id, scale)}
+                            onBeforeChange={onBeforeTransformChange}
                         />
                         {isSelected && (
-                            <AxisGizmo position={transform.position} onDrag={(pos) => onDragAsset(asset.id, pos)} />
+                            <AxisGizmo
+                                position={transform.position}
+                                onDrag={(pos) => onDragAsset(asset.id, pos)}
+                                onBeforeChange={onBeforeTransformChange}
+                            />
                         )}
                     </Fragment>
                 );

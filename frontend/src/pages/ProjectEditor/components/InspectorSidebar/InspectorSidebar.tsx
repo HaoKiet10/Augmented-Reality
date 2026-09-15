@@ -13,6 +13,7 @@ interface InspectorSidebarProps {
     uniformScale: boolean;
     setUniformScale: (val: boolean) => void;
     onResetConfig: () => void;
+    onBeforeChange: () => void;
 }
 
 export function InspectorSidebar({
@@ -21,10 +22,14 @@ export function InspectorSidebar({
     scaleX, scaleY, scaleZ, updateScale,
     uniformScale, setUniformScale,
     onResetConfig,
+    onBeforeChange,
 }: InspectorSidebarProps) {
     return (
         <aside className="w-80 border-l border-white/8 bg-[#111218] p-5 flex flex-col justify-between overflow-y-auto">
-            <div className="flex flex-col gap-6">
+            {/* onFocus ở đây bắt luôn mọi input số bên trong (PositionControls/RotationControls/
+                ScaleControls) nhờ React delegate sự kiện focus qua synthetic event system — chốt
+                đúng 1 snapshot undo ngay khi user bắt đầu sửa 1 ô, không cần sửa từng input riêng. */}
+            <div className="flex flex-col gap-6" onFocus={onBeforeChange}>
                 <h3 className="text-sm font-bold tracking-wide text-gray-300">PROPERTIES INSPECTOR</h3>
 
                 <PositionControls posX={posX} posY={posY} posZ={posZ} setPosX={setPosX} setPosY={setPosY} setPosZ={setPosZ} />
@@ -41,7 +46,7 @@ export function InspectorSidebar({
 
             <div className="flex flex-col gap-2">
                 <button
-                    onClick={onResetConfig}
+                    onClick={() => { onBeforeChange(); onResetConfig(); }}
                     className="w-full py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg font-bold text-xs text-gray-300 hover:text-white transition-all active:scale-[0.98]"
                 >
                     Reset Coordinates

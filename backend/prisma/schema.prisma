@@ -66,6 +66,8 @@ model Asset {
   width      Int? // Kích thước gốc (px) — chỉ có với ảnh, dùng để giữ đúng tỉ lệ khung hình khi render trong AR scene
   height     Int? // Kích thước gốc (px) — chỉ có với ảnh
   transform  Json? // AR spatial transform for this asset: { position, rotation, scale }
+  deletedAt  DateTime? // Soft-delete — asset "xoá" chỉ đánh dấu ở đây, file vật lý vẫn giữ nguyên
+  // trong storage để có thể restore (undo) bất cứ lúc nào, không phụ thuộc save/autosave.
   projectId  String
   project    Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
   uploadedBy String // User ID who uploaded

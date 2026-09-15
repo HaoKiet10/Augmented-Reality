@@ -9,6 +9,8 @@ import { useAssetTransform } from './hooks/useAssetTransform';
 import { useAssetUpload } from './hooks/useAssetUpload';
 import { useAssetActions } from './hooks/useAssetActions';
 import { useAssetKeyboardShortcuts } from './hooks/useAssetKeyboardShortcuts';
+import { useUndoRedo } from './hooks/useUndoRedo';
+import { useAutosave } from './hooks/useAutosave';
 import { useSpatialSave } from './hooks/useSpatialSave';
 import { useProjectRename } from './hooks/useProjectRename';
 
@@ -37,6 +39,8 @@ export const ProjectEditor: React.FC = () => {
         publishProject,
         unpublishProject,
     } = useProjectData(id);
+
+    const { snapshot: snapshotForUndo, pushAction, undo, redo } = useUndoRedo(assets, setAssets);
 
     const [publishLoading, setPublishLoading] = useState(false);
     const [publishError, setPublishError] = useState<string | null>(null);
@@ -107,13 +111,16 @@ export const ProjectEditor: React.FC = () => {
 
     const { handleDeleteAsset, handleDuplicateAsset } = useAssetActions({
         id,
+        assets,
         activeAsset,
         onDeleted: (assetId) => setAssets((prev) => prev.filter((a) => a.id !== assetId)),
+        onRestore: (asset) => setAssets((prev) => [asset, ...prev]),
         onActiveAssetCleared: () => setActiveAsset(null),
         onDuplicated: (newAsset) => {
             setAssets((prev) => [newAsset, ...prev]);
             setActiveAsset(newAsset);
         },
+        pushUndoAction: pushAction,
     });
 
     useAssetKeyboardShortcuts({
@@ -123,9 +130,17 @@ export const ProjectEditor: React.FC = () => {
         onTransformChange: updateAssetTransform,
         onDeleteAsset: handleDeleteAsset,
         onDuplicateAsset: handleDuplicateAsset,
+        onUndo: undo,
+        onRedo: redo,
+        onSave: () => { saveTransform().catch((err) => console.error(err)); },
+        onBeforeChange: snapshotForUndo,
     });
 
-    const { saveStatus, handleSaveConfig, saveTransform } = useSpatialSave({ id, activeAsset });
+    const { saveStatus, handleSaveConfig, saveTransform } = useSpatialSave({ id, assets });
+
+    // Autosave transform mỗi 30s — xoá/nhân bản KHÔNG cần autosave lo vì đã commit thật ngay lúc
+    // bấm rồi (soft-delete ở backend), chỉ còn transform (kéo/scale/nudge) là thứ cần lưu định kỳ.
+    useAutosave(saveTransform, 30000);
 
     const { name, setName, isEditing, setIsEditing, handleSave, handleKeyDown } = useProjectRename({
         id,
@@ -211,6 +226,7 @@ export const ProjectEditor: React.FC = () => {
                             scale,
                         });
                     }}
+                    onBeforeTransformChange={snapshotForUndo}
                 />
 
                 <InspectorSidebar
@@ -223,6 +239,7 @@ export const ProjectEditor: React.FC = () => {
                     uniformScale={spatialConfig.uniformScale}
                     setUniformScale={spatialConfig.setUniformScale}
                     onResetConfig={spatialConfig.resetConfig}
+                    onBeforeChange={snapshotForUndo}
                 />
             </div>
         </div>

@@ -9,6 +9,10 @@ interface UseAssetKeyboardShortcutsParams {
     onTransformChange: (assetId: string, transform: AssetTransform) => void;
     onDeleteAsset: (assetId: string) => void;
     onDuplicateAsset: (assetId: string) => void;
+    onUndo: () => void;
+    onRedo: () => void;
+    onSave: () => void;
+    onBeforeChange: () => void;
 }
 
 // Đơn vị position là TỈ LỆ TƯƠNG ĐỐI so với chiều rộng trigger image (xem asset.service.ts
@@ -28,6 +32,8 @@ function isTypingInField(target: EventTarget | null): boolean {
  * - Escape: bỏ chọn
  * - Mũi tên: nhích vị trí asset đang chọn trên mặt phẳng marker (X/Z), giữ Shift = nhích nhanh
  * - Ctrl/Cmd + D: nhân bản asset đang chọn
+ * - Ctrl/Cmd + Z: undo — Ctrl/Cmd + Shift + Z (hoặc Ctrl/Cmd + Y): redo
+ * - Ctrl/Cmd + S: lưu thủ công (lưu transform TẤT CẢ asset, không chỉ asset đang chọn)
  * - Tab / Shift+Tab: chuyển qua asset kế tiếp/trước đó trong danh sách
  *
  * Cố ý KHÔNG dùng Backspace để xoá asset (dù là phím xoá quen thuộc): các bộ gõ tiếng Việt
@@ -48,12 +54,35 @@ export function useAssetKeyboardShortcuts({
     onTransformChange,
     onDeleteAsset,
     onDuplicateAsset,
+    onUndo,
+    onRedo,
+    onSave,
+    onBeforeChange,
 }: UseAssetKeyboardShortcutsParams) {
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if (isTypingInField(e.target) || isTypingInField(document.activeElement)) return;
 
             const key = e.key;
+            const isCtrlOrCmd = e.ctrlKey || e.metaKey;
+
+            // Undo/Redo/Save không cần asset nào đang chọn, nên xử lý TRƯỚC gate `!activeAsset`
+            // bên dưới (khác với Delete/Escape/mũi tên/Duplicate — những cái đó cần có asset).
+            if (isCtrlOrCmd && key.toLowerCase() === 'z') {
+                e.preventDefault(); // trình duyệt mặc định Ctrl+Z = undo text field
+                if (e.shiftKey) onRedo(); else onUndo();
+                return;
+            }
+            if (isCtrlOrCmd && key.toLowerCase() === 'y') {
+                e.preventDefault(); // alias quen thuộc trên Windows: Ctrl+Y = redo
+                onRedo();
+                return;
+            }
+            if (isCtrlOrCmd && key.toLowerCase() === 's') {
+                e.preventDefault(); // trình duyệt mặc định Ctrl+S = Save Page As...
+                onSave();
+                return;
+            }
 
             if (key === 'Tab') {
                 // Chỉ cướp Tab khi không có phần tử nào khác đang được focus, để không phá
@@ -98,6 +127,7 @@ export function useAssetKeyboardShortcuts({
                 const deltaX = key === 'ArrowLeft' ? -step : key === 'ArrowRight' ? step : 0;
                 const deltaZ = key === 'ArrowUp' ? -step : key === 'ArrowDown' ? step : 0;
 
+                onBeforeChange();
                 onTransformChange(activeAsset.id, {
                     ...current,
                     position: {
@@ -111,5 +141,5 @@ export function useAssetKeyboardShortcuts({
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [assets, activeAsset, onSelectAsset, onTransformChange, onDeleteAsset, onDuplicateAsset]);
+    }, [assets, activeAsset, onSelectAsset, onTransformChange, onDeleteAsset, onDuplicateAsset, onUndo, onRedo, onSave, onBeforeChange]);
 }
