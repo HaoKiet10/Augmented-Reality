@@ -1,8 +1,59 @@
-import { useState, memo, Fragment } from 'react';
-import { Entity, Scene } from 'aframe-react';
+import { useState, useRef, useEffect, memo, Fragment } from 'react';
+import { Entity } from 'aframe-react';
 import type { Asset } from '../../types';
 import { isImageAsset, isVideoAsset } from '../../utils/assetType';
 import { DEFAULT_SPATIAL_CONFIG } from '../../constants';
+
+/**
+ * Theo dõi trạng thái "đã có frame thật" của từng thẻ <video> trong <a-assets>.
+ *
+ * Lý do cần cái này: THREE.VideoTexture mà A-Frame tạo cho `a-video` được gắn vào
+ * material NGAY khi entity mount, bất kể thẻ <video> đã tải được frame nào chưa.
+ * Trong lúc video còn readyState = 0 (HAVE_NOTHING), texture đó là texture "rỗng"
+ * trên GPU — và giá trị mặc định đó hiển thị ra là một màu cyan/lục lam đặc trưng,
+ * KHÔNG phải chủ đích của app. Nếu network/CORS lỗi khiến video không bao giờ tải
+ * được, người dùng sẽ thấy màu cyan đó mãi mãi thay vì chỉ trong chốc lát.
+ *
+ * Giải pháp: ẩn `a-video` (không render entity vật liệu video) cho tới khi trình
+ * duyệt xác nhận đã có ít nhất 1 frame (`loadeddata`), đồng thời bắt sự kiện lỗi
+ * để phân biệt "đang tải" với "tải hỏng" (ví dụ do CORS) và báo rõ cho người dùng
+ * thay vì im lặng hiện màu cyan.
+ */
+function useVideoReadyState(videoElId: string, assetUrl: string) {
+    const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
+    const attemptedUrlRef = useRef<string | null>(null);
+
+    useEffect(() => {
+        // Đổi asset (url mới) -> reset lại trạng thái, chờ frame mới.
+        if (attemptedUrlRef.current !== assetUrl) {
+            attemptedUrlRef.current = assetUrl;
+            setStatus('loading');
+        }
+
+        const videoEl = document.getElementById(videoElId) as HTMLVideoElement | null;
+        if (!videoEl) return;
+
+        // Video có thể đã sẵn sàng từ trước khi effect này gắn listener (ví dụ
+        // component re-mount nhưng thẻ <video> trong <a-assets> vẫn còn sống).
+        if (videoEl.readyState >= 2) {
+            setStatus('ready');
+            return;
+        }
+
+        const handleLoadedData = () => setStatus('ready');
+        const handleError = () => setStatus('error');
+
+        videoEl.addEventListener('loadeddata', handleLoadedData);
+        videoEl.addEventListener('error', handleError);
+
+        return () => {
+            videoEl.removeEventListener('loadeddata', handleLoadedData);
+            videoEl.removeEventListener('error', handleError);
+        };
+    }, [videoElId, assetUrl]);
+
+    return status;
+}
 
 interface ArSceneProps {
     assets: Asset[];
@@ -111,6 +162,10 @@ function AssetEntity({
     const isImage = isImageAsset(asset.fileType, asset.filename);
     const transform = asset.transform ?? DEFAULT_SPATIAL_CONFIG;
     const videoElId = `ar-video-src-${asset.id}`;
+    // Luôn gọi hook (tuân thủ rules-of-hooks) — với asset không phải video thì
+    // videoElId trỏ tới 1 <video> không tồn tại, hook chỉ đứng yên ở 'loading'
+    // và giá trị đó không được dùng ở nhánh render bên dưới.
+    const videoStatus = useVideoReadyState(videoElId, asset.url);
 
     // Giữ chiều rộng cố định 1.6 (đơn vị scene) và suy ra chiều cao theo đúng tỉ lệ
     // khung hình gốc của ảnh (width/height tính bằng px, lưu lúc upload) — nếu không
@@ -155,8 +210,28 @@ function AssetEntity({
 
     return (
         <Entity {...entityProps}>
-            {isVideo && (
+            {isVideo && videoStatus === 'ready' && (
                 <Entity primitive="a-video" src={`#${videoElId}`} width="1.6" height="0.9" material="side: double" />
+            )}
+            {isVideo && videoStatus === 'loading' && (
+                // Placeholder trung tính trong lúc video chưa có frame thật — thay cho
+                // việc để lộ THREE.VideoTexture rỗng (hiện ra màu cyan).
+                <Entity
+                    primitive="a-plane"
+                    width="1.6"
+                    height="0.9"
+                    material="color: #1f2937; shader: flat; side: double; opacity: 0.85"
+                />
+            )}
+            {isVideo && videoStatus === 'error' && (
+                // Video tải lỗi (ví dụ CORS/URL hỏng) — báo rõ bằng màu đỏ thay vì
+                // im lặng đứng yên ở trạng thái loading hoặc lộ ra màu cyan.
+                <Entity
+                    primitive="a-plane"
+                    width="1.6"
+                    height="0.9"
+                    material="color: #7f1d1d; shader: flat; side: double; opacity: 0.85"
+                />
             )}
             {isImage && (
                 <Entity primitive="a-image" src={asset.url} width={String(IMAGE_PLANE_WIDTH)} height={String(imagePlaneHeight)} material="side: double" />
@@ -190,11 +265,19 @@ export function ArScene({ assets, activeAssetId, onSelectAsset, onDragAsset, onS
     const [draggingId, setDraggingId] = useState<string | null>(null);
 
     return (
-        <Scene
+        <a-scene
             embedded
             className="w-full h-full"
             vr-mode-ui="enabled: false"
             cursor="rayOrigin: mouse"
+            // Tắt loading-screen mặc định của A-Frame (nền #24CAFF, tiêu đề lấy từ
+            // document.title, 3 chấm trắng — chính là "màn hình loading màu cyan").
+            // App đã có loading UI riêng ở ArViewport.tsx (spinner "Rendering A-Frame
+            // Graphics Engine..." + trạng thái "AR Preview Sandbox"), nên không cần
+            // lớp loading-screen thứ 2 của A-Frame — vốn còn hay bị kẹt/tắt trễ vì
+            // <a-assets> ở đây có <video> được React render ĐỘNG, khiến A-Frame đếm
+            // tiến trình tải asset không khớp thời điểm.
+            loading-screen="enabled: false"
             onContextMenu={(e: React.MouseEvent) => e.preventDefault()}
         >
             {/* <a-assets> phải là con TRỰC TIẾP của <a-scene>, không bọc div ngoài.
@@ -257,6 +340,6 @@ export function ArScene({ assets, activeAssetId, onSelectAsset, onDragAsset, onS
 
             {/* Camera controls */}
             <CameraRig />
-        </Scene>
+        </a-scene>
     );
 }
