@@ -2,6 +2,81 @@ import { useEffect, useState } from 'react';
 import { isTypingInField } from '../utils/keyboard';
 
 /**
+ * A-Frame không có type definitions chính thức, nên `el`/`sceneEl`/`data`/tham số event của
+ * THREE.js vẫn phải để `any` — không có gì để type chính xác hơn nếu không tự cài @types/aframe
+ * (vốn không đầy đủ/không còn maintain tốt). 4 interface dưới đây CHỈ type phần STATE riêng mà
+ * mỗi component tự gắn thêm vào `this` (`this.keys`, `this.isDragging`...) — trước đây toàn bộ
+ * đều là `this: any`, nghĩa là gõ nhầm tên property (vd. `this.lastKeyTme` thay vì
+ * `this.lastKeyTime`) chỉ lộ ra lúc CHẠY (hoặc không lộ ra luôn, chỉ lặng lẽ không hoạt động đúng)
+ * thay vì bị TypeScript bắt ngay lúc build. Cũng có thêm autocomplete khi sửa code sau này.
+ */
+interface DraggableObjectState {
+    el: any;
+    isDragging: boolean;
+    plane: any;
+    raycaster: any;
+    mouse: any;
+    intersection: any;
+    offset: any;
+    onMouseDown: (evt: any) => void;
+    onMouseMove: (evt: any) => void;
+    onMouseUp: (evt: any) => void;
+}
+
+interface ScaleHandleState {
+    el: any;
+    isDragging: boolean;
+    startDistance: number;
+    startScale: number;
+    onMouseDown: (evt: any) => void;
+    onMouseMove: (evt: any) => void;
+    onMouseUp: (evt: any) => void;
+    getScreenCenter: (camera: any, rect: DOMRect) => { x: number; y: number };
+}
+
+interface AxisHandleState {
+    el: any;
+    data: { axis: 'x' | 'y' | 'z'; color: string };
+    isDragging: boolean;
+    isHovered: boolean;
+    plane: any;
+    raycaster: any;
+    mouse: any;
+    intersection: any;
+    axisDir: any;
+    startObjectPos: any;
+    startProjection: number;
+    onMouseDown: (evt: any) => void;
+    onMouseMove: (evt: any) => void;
+    onMouseUp: (evt: any) => void;
+    onMouseEnter: () => void;
+    onMouseLeave: () => void;
+    updateVisual: () => void;
+}
+
+interface FreeFlyControlsState {
+    el: any;
+    data: { speed: number; enabled: boolean };
+    keys: Record<string, boolean>;
+    lastKeyTime: Record<string, number>;
+    pitch: number;
+    yaw: number;
+    isRotating: boolean;
+    lastX: number;
+    lastY: number;
+    onKeyDown: (e: KeyboardEvent) => void;
+    onKeyUp: (e: KeyboardEvent) => void;
+    onBlur: () => void;
+    onComposition: () => void;
+    onMouseDown: (evt: MouseEvent) => void;
+    onMouseMove: (evt: MouseEvent) => void;
+    onMouseUp: (evt: MouseEvent) => void;
+    onWheel: (evt: WheelEvent) => void;
+    onContextMenu: (evt: Event) => void;
+    focusOnSelected: () => void;
+}
+
+/**
  * Với aframe-react, A-Frame core được import trực tiếp từ package `aframe`
  * thay vì inject <script> từ CDN. Import có side-effect (gắn `window.AFRAME`),
  * nên chỉ cần đảm bảo import đã chạy xong trước khi render <Scene>.
@@ -18,7 +93,7 @@ export function useAframeScript(): boolean {
                 const THREE = AFRAME.THREE;
                 if (!AFRAME.components['draggable-object']) {
                     AFRAME.registerComponent('draggable-object', {
-                        init: function (this: any) {
+                        init: function (this: DraggableObjectState) {
                             this.isDragging = false;
                             this.plane = new THREE.Plane();
                             this.raycaster = new THREE.Raycaster();
@@ -32,7 +107,7 @@ export function useAframeScript(): boolean {
 
                             this.el.addEventListener('mousedown', this.onMouseDown);
                         },
-                        onMouseDown: function (this: any, evt: any) {
+                        onMouseDown: function (this: DraggableObjectState, evt: any) {
                             const originalEvent = evt.detail.mouseEvent || evt.detail.touchEvent || evt;
 
                             // Chỉ chuột TRÁI mới kéo được asset. Chuột phải/giữa hoàn toàn thuộc về
@@ -82,7 +157,7 @@ export function useAframeScript(): boolean {
                             window.addEventListener('mouseup', this.onMouseUp);
                             window.addEventListener('touchend', this.onMouseUp);
                         },
-                        onMouseMove: function (this: any, evt: any) {
+                        onMouseMove: function (this: DraggableObjectState, evt: any) {
                             if (!this.isDragging) return;
 
                             const camera = this.el.sceneEl.camera;
@@ -131,7 +206,7 @@ export function useAframeScript(): boolean {
                             this.el.setAttribute('position', roundedPos);
                             this.el.emit('dragposition', roundedPos);
                         },
-                        onMouseUp: function (this: any) {
+                        onMouseUp: function (this: DraggableObjectState) {
                             if (this.isDragging) {
                                 this.isDragging = false;
                                 this.el.emit('dragend');
@@ -142,7 +217,7 @@ export function useAframeScript(): boolean {
                                 window.removeEventListener('touchend', this.onMouseUp);
                             }
                         },
-                        remove: function (this: any) {
+                        remove: function (this: DraggableObjectState) {
                             this.el.removeEventListener('mousedown', this.onMouseDown);
                             window.removeEventListener('mousemove', this.onMouseMove);
                             window.removeEventListener('touchmove', this.onMouseMove);
@@ -154,14 +229,14 @@ export function useAframeScript(): boolean {
 
                 if (!AFRAME.components['scale-handle']) {
                     AFRAME.registerComponent('scale-handle', {
-                        init: function (this: any) {
+                        init: function (this: ScaleHandleState) {
                             this.isDragging = false;
                             this.onMouseDown = this.onMouseDown.bind(this);
                             this.onMouseMove = this.onMouseMove.bind(this);
                             this.onMouseUp = this.onMouseUp.bind(this);
                             this.el.addEventListener('mousedown', this.onMouseDown);
                         },
-                        getScreenCenter: function (this: any, camera: any, rect: DOMRect) {
+                        getScreenCenter: function (this: ScaleHandleState, camera: any, rect: DOMRect) {
                             const worldPos = new THREE.Vector3();
                             this.el.parentEl.object3D.getWorldPosition(worldPos);
                             const ndc = worldPos.project(camera);
@@ -170,7 +245,7 @@ export function useAframeScript(): boolean {
                                 y: ((1 - ndc.y) / 2) * rect.height + rect.top,
                             };
                         },
-                        onMouseDown: function (this: any, evt: any) {
+                        onMouseDown: function (this: ScaleHandleState, evt: any) {
                             const originalEvent = evt.detail.mouseEvent || evt.detail.touchEvent || evt;
                             if (typeof originalEvent.button === 'number' && originalEvent.button !== 0) return;
 
@@ -199,7 +274,7 @@ export function useAframeScript(): boolean {
                             window.addEventListener('mouseup', this.onMouseUp);
                             window.addEventListener('touchend', this.onMouseUp);
                         },
-                        onMouseMove: function (this: any, evt: any) {
+                        onMouseMove: function (this: ScaleHandleState, evt: any) {
                             if (!this.isDragging) return;
                             const camera = this.el.sceneEl.camera;
                             const parentEl = this.el.parentEl;
@@ -222,7 +297,7 @@ export function useAframeScript(): boolean {
                             parentEl.setAttribute('scale', nextScale);
                             parentEl.emit('scalevalue', nextScale);
                         },
-                        onMouseUp: function (this: any) {
+                        onMouseUp: function (this: ScaleHandleState) {
                             if (!this.isDragging) return;
                             this.isDragging = false;
                             this.el.emit('scaleend');
@@ -232,7 +307,7 @@ export function useAframeScript(): boolean {
                             window.removeEventListener('mouseup', this.onMouseUp);
                             window.removeEventListener('touchend', this.onMouseUp);
                         },
-                        remove: function (this: any) {
+                        remove: function (this: ScaleHandleState) {
                             this.el.removeEventListener('mousedown', this.onMouseDown);
                             window.removeEventListener('mousemove', this.onMouseMove);
                             window.removeEventListener('touchmove', this.onMouseMove);
@@ -248,7 +323,7 @@ export function useAframeScript(): boolean {
                             axis: { type: 'string', default: 'x' }, // 'x' | 'y' | 'z'
                             color: { type: 'color', default: '#ffffff' } // màu gốc — dùng để trả lại khi hết hover/kéo
                         },
-                        init: function (this: any) {
+                        init: function (this: AxisHandleState) {
                             this.isDragging = false;
                             this.isHovered = false;
                             this.plane = new THREE.Plane();
@@ -274,17 +349,17 @@ export function useAframeScript(): boolean {
 
                             this.updateVisual();
                         },
-                        onMouseEnter: function (this: any) {
+                        onMouseEnter: function (this: AxisHandleState) {
                             this.isHovered = true;
                             this.updateVisual();
                         },
-                        onMouseLeave: function (this: any) {
+                        onMouseLeave: function (this: AxisHandleState) {
                             this.isHovered = false;
                             this.updateVisual();
                         },
                         // Hover hoặc đang kéo: sáng màu vàng + phình to 1.4x cho dễ thấy đang chọn
                         // đúng trục nào. Nhả ra thì về màu gốc + kích thước bình thường.
-                        updateVisual: function (this: any) {
+                        updateVisual: function (this: AxisHandleState) {
                             const highlighted = this.isHovered || this.isDragging;
                             this.el.setAttribute('material', 'color', highlighted ? '#fde047' : this.data.color);
                             const s = highlighted ? 1.4 : 1;
@@ -296,7 +371,7 @@ export function useAframeScript(): boolean {
                         // đúng vector trục đang kéo — bỏ qua hoàn toàn phần lệch vuông góc với trục.
                         // Nhờ vậy object chỉ trượt dọc theo 1 đường thẳng dù tay kéo không thật sự
                         // thẳng hàng với trục trên màn hình.
-                        onMouseDown: function (this: any, evt: any) {
+                        onMouseDown: function (this: AxisHandleState, evt: any) {
                             const originalEvent = evt.detail.mouseEvent || evt.detail.touchEvent || evt;
                             if (typeof originalEvent.button === 'number' && originalEvent.button !== 0) return;
 
@@ -338,7 +413,7 @@ export function useAframeScript(): boolean {
                             window.addEventListener('mouseup', this.onMouseUp);
                             window.addEventListener('touchend', this.onMouseUp);
                         },
-                        onMouseMove: function (this: any, evt: any) {
+                        onMouseMove: function (this: AxisHandleState, evt: any) {
                             if (!this.isDragging) return;
                             const camera = this.el.sceneEl.camera;
                             if (!camera) return;
@@ -367,7 +442,7 @@ export function useAframeScript(): boolean {
                             // xem AxisGizmo trong ArScene.tsx.
                             this.el.parentEl.emit('axisdragposition', roundedPos);
                         },
-                        onMouseUp: function (this: any) {
+                        onMouseUp: function (this: AxisHandleState) {
                             if (!this.isDragging) return;
                             this.isDragging = false;
                             this.updateVisual();
@@ -378,7 +453,7 @@ export function useAframeScript(): boolean {
                             window.removeEventListener('mouseup', this.onMouseUp);
                             window.removeEventListener('touchend', this.onMouseUp);
                         },
-                        remove: function (this: any) {
+                        remove: function (this: AxisHandleState) {
                             this.el.removeEventListener('mousedown', this.onMouseDown);
                             this.el.removeEventListener('mouseenter', this.onMouseEnter);
                             this.el.removeEventListener('mouseleave', this.onMouseLeave);
@@ -396,7 +471,7 @@ export function useAframeScript(): boolean {
                             speed: { type: 'number', default: 0.1 },
                             enabled: { type: 'boolean', default: true }
                         },
-                        init: function (this: any) {
+                        init: function (this: FreeFlyControlsState) {
                             this.keys = {};
                             // Mốc thời gian keydown (thật, có auto-repeat) gần nhất của từng phím —
                             // dùng để "watchdog" phát hiện phím bị kẹt true mãi mãi, xem chi tiết
@@ -461,7 +536,7 @@ export function useAframeScript(): boolean {
                             window.addEventListener('mousemove', this.onMouseMove);
                             window.addEventListener('mouseup', this.onMouseUp);
                         },
-                        onKeyDown: function (this: any, e: KeyboardEvent) {
+                        onKeyDown: function (this: FreeFlyControlsState, e: KeyboardEvent) {
                             // Đang gõ trong 1 field thật (input đổi tên, ô số Inspector...) -> bỏ
                             // qua HOÀN TOÀN, không preventDefault/không set this.keys. Quan trọng
                             // nhất với bộ gõ tiếng Việt Telex: 'w', 's', 'd', 'e' là các phím ghép
@@ -491,19 +566,19 @@ export function useAframeScript(): boolean {
                                 if (key === 'f') this.focusOnSelected();
                             }
                         },
-                        onKeyUp: function (this: any, e: KeyboardEvent) {
+                        onKeyUp: function (this: FreeFlyControlsState, e: KeyboardEvent) {
                             const key = e.key.toLowerCase();
                             this.keys[key] = false;
                             delete this.lastKeyTime[key];
                         },
-                        onBlur: function (this: any) {
+                        onBlur: function (this: FreeFlyControlsState) {
                             this.keys = {};
                             this.lastKeyTime = {};
                         },
                         // Xem chú thích ở nơi đăng ký listener (init) — reset cứng mỗi khi 1 phiên
                         // IME compose bắt đầu hoặc kết thúc, phòng trường hợp bộ gõ tiếng Việt
                         // nuốt mất keyup thật của phím đang giữ.
-                        onComposition: function (this: any) {
+                        onComposition: function (this: FreeFlyControlsState) {
                             this.keys = {};
                             this.lastKeyTime = {};
                         },
@@ -512,7 +587,7 @@ export function useAframeScript(): boolean {
                         // không ảnh hưởng gì tới thao tác xoay này (draggable-object chỉ nhận chuột trái,
                         // xem useAframeScript.ts phần draggable-object).
                         // Chuột giữa: tạm thời không có chức năng gì.
-                        onMouseDown: function (this: any, evt: MouseEvent) {
+                        onMouseDown: function (this: FreeFlyControlsState, evt: MouseEvent) {
                             if (evt.button === 2) {
                                 evt.preventDefault();
                                 this.isRotating = true;
@@ -520,7 +595,7 @@ export function useAframeScript(): boolean {
                                 this.lastY = evt.clientY;
                             }
                         },
-                        onMouseMove: function (this: any, evt: MouseEvent) {
+                        onMouseMove: function (this: FreeFlyControlsState, evt: MouseEvent) {
                             if (this.isRotating) {
                                 const dx = evt.clientX - this.lastX;
                                 const dy = evt.clientY - this.lastY;
@@ -534,11 +609,11 @@ export function useAframeScript(): boolean {
                                 this.el.setAttribute('rotation', { x: this.pitch, y: this.yaw, z: 0 });
                             }
                         },
-                        onMouseUp: function (this: any, evt: MouseEvent) {
+                        onMouseUp: function (this: FreeFlyControlsState, evt: MouseEvent) {
                             if (evt.button === 2) this.isRotating = false;
                         },
                         // Lăn chuột = zoom (tiến/lùi theo hướng camera đang nhìn).
-                        onWheel: function (this: any, evt: WheelEvent) {
+                        onWheel: function (this: FreeFlyControlsState, evt: WheelEvent) {
                             evt.preventDefault();
                             const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(this.el.object3D.quaternion);
                             const ZOOM_SPEED = 0.0015;
@@ -550,13 +625,13 @@ export function useAframeScript(): boolean {
                                 z: pos.z + forward.z * delta,
                             });
                         },
-                        onContextMenu: function (this: any, evt: Event) {
+                        onContextMenu: function (this: FreeFlyControlsState, evt: Event) {
                             // Right-click dùng để xoay camera — chặn menu chuột phải mặc định của browser.
                             evt.preventDefault();
                         },
                         // Phím F: bay camera lại gần và nhìn thẳng vào asset đang được chọn (đánh dấu
                         // bằng attribute data-selected="true" trên entity gốc, xem ArScene.tsx).
-                        focusOnSelected: function (this: any) {
+                        focusOnSelected: function (this: FreeFlyControlsState) {
                             const targetEl = this.el.sceneEl.querySelector('[data-selected="true"]');
                             if (!targetEl || !targetEl.object3D) return;
 
@@ -584,7 +659,7 @@ export function useAframeScript(): boolean {
                             this.yaw = THREE.MathUtils.radToDeg(euler.y);
                             this.el.setAttribute('rotation', { x: this.pitch, y: this.yaw, z: 0 });
                         },
-                        tick: function (this: any, _time: number, timeDelta: number) {
+                        tick: function (this: FreeFlyControlsState, _time: number, timeDelta: number) {
                             if (!this.data.enabled) return;
 
                             // Watchdog: 1 phím giữ THẬT sẽ liên tục bắn keydown lặp lại (auto-repeat
@@ -648,7 +723,7 @@ export function useAframeScript(): boolean {
 
                             if (moved) this.el.setAttribute('position', position);
                         },
-                        remove: function (this: any) {
+                        remove: function (this: FreeFlyControlsState) {
                             window.removeEventListener('keydown', this.onKeyDown, true);
                             window.removeEventListener('keyup', this.onKeyUp);
                             window.removeEventListener('blur', this.onBlur);

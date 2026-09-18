@@ -2,6 +2,7 @@ import { Box } from 'lucide-react';
 import type { Asset } from '../../types';
 import { ArScene } from './ArScene';
 import { ArStatusBadge } from './ArStatusBadge';
+import { ArSceneErrorBoundary } from './ArSceneErrorBoundary';
 
 interface ArViewportProps {
     aframeLoaded: boolean;
@@ -36,14 +37,16 @@ export function ArViewport({ aframeLoaded, assets, activeAssetId, onSelectAsset,
                 </div>
             ) : (
                 <div className="absolute inset-0 w-full h-full">
-                    <ArScene
-                        assets={assets}
-                        activeAssetId={activeAssetId}
-                        onSelectAsset={onSelectAsset}
-                        onDragAsset={onDragAsset}
-                        onScaleAsset={onScaleAsset}
-                        onBeforeTransformChange={onBeforeTransformChange}
-                    />
+                    <ArSceneErrorBoundary>
+                        <ArScene
+                            assets={assets}
+                            activeAssetId={activeAssetId}
+                            onSelectAsset={onSelectAsset}
+                            onDragAsset={onDragAsset}
+                            onScaleAsset={onScaleAsset}
+                            onBeforeTransformChange={onBeforeTransformChange}
+                        />
+                    </ArSceneErrorBoundary>
                     {activeAsset && <ArStatusBadge activeAsset={activeAsset} />}
                 </div>
             )}
