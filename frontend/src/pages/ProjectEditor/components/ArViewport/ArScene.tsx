@@ -113,6 +113,7 @@ const AxisGizmo = memo(function AxisGizmo({
             {/* Trục X — đỏ */}
             <Entity
                 axis-handle="axis: x; color: #ef4444"
+                data-selectable=""
                 geometry={`primitive: cylinder; radius: 0.035; height: ${ARM_LENGTH}`}
                 material="shader: flat"
                 rotation="0 0 -90"
@@ -121,6 +122,7 @@ const AxisGizmo = memo(function AxisGizmo({
             {/* Trục Y — xanh lá */}
             <Entity
                 axis-handle="axis: y; color: #22c55e"
+                data-selectable=""
                 geometry={`primitive: cylinder; radius: 0.035; height: ${ARM_LENGTH}`}
                 material="shader: flat"
                 position={`0 ${ARM_LENGTH / 2} 0`}
@@ -128,6 +130,7 @@ const AxisGizmo = memo(function AxisGizmo({
             {/* Trục Z — xanh dương */}
             <Entity
                 axis-handle="axis: z; color: #3b82f6"
+                data-selectable=""
                 geometry={`primitive: cylinder; radius: 0.035; height: ${ARM_LENGTH}`}
                 material="shader: flat"
                 rotation="90 0 0"
@@ -181,6 +184,7 @@ function AssetEntity({
         rotation: vectorToString(transform.rotation),
         scale: vectorToString(transform.scale),
         'draggable-object': '',
+        'data-selectable': '', // whitelist cho raycaster của cursor — xem cấu hình ở <Scene>
         'data-selected': isSelected ? 'true' : 'false',
         events: {
             click: (e: any) => {
@@ -211,13 +215,16 @@ function AssetEntity({
     return (
         <Entity {...entityProps}>
             {isVideo && videoStatus === 'ready' && (
-                <Entity primitive="a-video" src={`#${videoElId}`} width="1.6" height="0.9" material="side: double" />
+                <Entity primitive="a-video" data-selectable="" src={`#${videoElId}`} width="1.6" height="0.9" material="side: double" />
             )}
             {isVideo && videoStatus === 'loading' && (
                 // Placeholder trung tính trong lúc video chưa có frame thật — thay cho
-                // việc để lộ THREE.VideoTexture rỗng (hiện ra màu cyan).
+                // việc để lộ THREE.VideoTexture rỗng (hiện ra màu cyan). Vẫn cần
+                // data-selectable để không bị "mất" khả năng bấm/kéo asset trong lúc
+                // đang chờ video tải (raycaster chỉ bắt entity có mesh + data-selectable).
                 <Entity
                     primitive="a-plane"
+                    data-selectable=""
                     width="1.6"
                     height="0.9"
                     material="color: #1f2937; shader: flat; side: double; opacity: 0.85"
@@ -228,15 +235,16 @@ function AssetEntity({
                 // im lặng đứng yên ở trạng thái loading hoặc lộ ra màu cyan.
                 <Entity
                     primitive="a-plane"
+                    data-selectable=""
                     width="1.6"
                     height="0.9"
                     material="color: #7f1d1d; shader: flat; side: double; opacity: 0.85"
                 />
             )}
             {isImage && (
-                <Entity primitive="a-image" src={asset.url} width={String(IMAGE_PLANE_WIDTH)} height={String(imagePlaneHeight)} material="side: double" />
+                <Entity primitive="a-image" data-selectable="" src={asset.url} width={String(IMAGE_PLANE_WIDTH)} height={String(imagePlaneHeight)} material="side: double" />
             )}
-            {!isVideo && !isImage && <Entity primitive="a-gltf-model" src={asset.url} />}
+            {!isVideo && !isImage && <Entity primitive="a-gltf-model" data-selectable="" src={asset.url} />}
 
             {isSelected && (
                 <>
@@ -250,6 +258,7 @@ function AssetEntity({
                     {/* Chấm nhỏ ở rìa — kéo ra xa/gần tâm để scale đều 3 trục. */}
                     <Entity
                         scale-handle=""
+                        data-selectable=""
                         geometry="primitive: sphere; radius: 0.06"
                         material="color: #fbbf24; shader: flat"
                         position="0.9 0 0"
@@ -270,6 +279,12 @@ export function ArScene({ assets, activeAssetId, onSelectAsset, onDragAsset, onS
             className="w-full h-full"
             vr-mode-ui="enabled: false"
             cursor="rayOrigin: mouse"
+            // Chỉ test giao cắt với các entity thật sự cần bắt tương tác (asset, scale-handle,
+            // axis-handle — xem 'data-selectable' rải rác trong file này). Mặc định raycaster
+            // test với TOÀN BỘ entity trong scene mỗi frame (kể cả floor/sky/grid-helper không
+            // ai click được) — đây chính là nguồn gốc warning lặp lại nhiều lần trong console:
+            // "[raycaster] For performance, please define raycaster.objects...".
+            raycaster="objects: [data-selectable]"
             // Tắt loading-screen mặc định của A-Frame (nền #24CAFF, tiêu đề lấy từ
             // document.title, 3 chấm trắng — chính là "màn hình loading màu cyan").
             // App đã có loading UI riêng ở ArViewport.tsx (spinner "Rendering A-Frame
