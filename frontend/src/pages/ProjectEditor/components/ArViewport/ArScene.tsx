@@ -272,9 +272,43 @@ function AssetEntity({
 export function ArScene({ assets, activeAssetId, onSelectAsset, onDragAsset, onScaleAsset, onBeforeTransformChange }: ArSceneProps) {
     const videoAssets = assets.filter((a) => isVideoAsset(a.fileType, a.filename));
     const [draggingId, setDraggingId] = useState<string | null>(null);
+    const sceneRef = useRef<any>(null);
+
+    // A-Frame chỉ tự tính lại kích thước canvas + aspect ratio camera khi bắt được sự kiện
+    // 'resize' của WINDOW (xem AFRAME.utils.device / core resize system) — nó KHÔNG theo dõi
+    // kích thước của chính container cha. Khi 2 sidebar 2 bên (AssetSidebar/InspectorSidebar)
+    // collapse/expand, main viewport đổi kích thước qua CSS transition (flex-1 + width transition
+    // của sidebar) mà không có window resize nào bắn ra -> canvas WebGL giữ nguyên độ phân giải
+    // cũ rồi bị trình duyệt kéo giãn theo khung CSS mới => hình bị méo/dãn trong lúc animation
+    // và cả sau khi animation xong. Dùng ResizeObserver theo dõi trực tiếp <a-scene> (nó tự lấp
+    // đầy container nhờ class w-full h-full) và gọi sceneEl.resize() mỗi khi kích thước thay đổi
+    // (kể cả các frame giữa lúc transition) để canvas luôn khớp với kích thước CSS thực tế.
+    useEffect(() => {
+        const sceneEl = sceneRef.current;
+        if (!sceneEl) return;
+
+        const triggerResize = () => {
+            if (typeof sceneEl.resize === 'function') {
+                sceneEl.resize();
+            }
+        };
+
+        const observer = new ResizeObserver(triggerResize);
+        observer.observe(sceneEl);
+
+        // Scene có thể chưa init xong (chưa gắn renderer) ngay lúc mount -> đợi 'loaded'
+        // rồi resize 1 lần cho chắc, phòng trường hợp kích thước ban đầu bị lệch.
+        sceneEl.addEventListener('loaded', triggerResize);
+
+        return () => {
+            observer.disconnect();
+            sceneEl.removeEventListener('loaded', triggerResize);
+        };
+    }, []);
 
     return (
         <a-scene
+            ref={sceneRef}
             embedded
             className="w-full h-full"
             vr-mode-ui="enabled: false"

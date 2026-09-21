@@ -45,6 +45,9 @@ export const ProjectEditor: React.FC = () => {
     const [publishLoading, setPublishLoading] = useState(false);
     const [publishError, setPublishError] = useState<string | null>(null);
 
+    const [assetSidebarCollapsed, setAssetSidebarCollapsed] = useState(false);
+    const [inspectorSidebarCollapsed, setInspectorSidebarCollapsed] = useState(false);
+
     const handlePublish = async () => {
         setPublishLoading(true);
         setPublishError(null);
@@ -198,6 +201,8 @@ export const ProjectEditor: React.FC = () => {
                     triggerImageUrl={project?.triggerImageUrl ?? null}
                     onUploadTrigger={handleUploadTrigger}
                     onDeleteTrigger={handleDeleteTrigger}
+                    collapsed={assetSidebarCollapsed}
+                    onToggleCollapsed={() => setAssetSidebarCollapsed((prev) => !prev)}
                 />
 
                 <ArViewport
@@ -240,6 +245,8 @@ export const ProjectEditor: React.FC = () => {
                     setUniformScale={spatialConfig.setUniformScale}
                     onResetConfig={spatialConfig.resetConfig}
                     onBeforeChange={snapshotForUndo}
+                    collapsed={inspectorSidebarCollapsed}
+                    onToggleCollapsed={() => setInspectorSidebarCollapsed((prev) => !prev)}
                 />
             </div>
         </div>
