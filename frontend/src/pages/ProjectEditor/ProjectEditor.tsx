@@ -231,6 +231,15 @@ export const ProjectEditor: React.FC = () => {
                             scale,
                         });
                     }}
+                    onRotateAsset={(assetId, rotation) => {
+                        const found = assets.find((a) => a.id === assetId);
+                        if (!found) return;
+                        const currentTransform = found.transform ?? DEFAULT_SPATIAL_CONFIG;
+                        updateAssetTransform(assetId, {
+                            ...currentTransform,
+                            rotation,
+                        });
+                    }}
                     onBeforeTransformChange={snapshotForUndo}
                 />
 

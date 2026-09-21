@@ -34,6 +34,17 @@ interface ScaleHandleState {
     getScreenCenter: (camera: any, rect: DOMRect) => { x: number; y: number };
 }
 
+interface RotatableObjectState {
+    el: any;
+    isDragging: boolean;
+    lastX: number;
+    lastY: number;
+    currentRotation: { x: number; y: number; z: number };
+    onMouseDown: (evt: any) => void;
+    onMouseMove: (evt: any) => void;
+    onMouseUp: (evt: any) => void;
+}
+
 interface AxisHandleState {
     el: any;
     data: { axis: 'x' | 'y' | 'z'; color: string };
@@ -317,6 +328,108 @@ export function useAframeScript(): boolean {
                     });
                 }
 
+                if (!AFRAME.components['rotatable-object']) {
+                    // Chuột GIỮA + kéo = xoay asset đang trỏ tới (trước đây chuột giữa hoàn toàn
+                    // không có chức năng gì — xem free-fly-controls.onMouseDown). Trái vẫn dành
+                    // riêng cho kéo di chuyển (draggable-object), phải vẫn dành cho xoay camera.
+                    // Giữ thêm Shift trong lúc xoay = snap góc về bội số 45° (xem onMouseMove).
+                    AFRAME.registerComponent('rotatable-object', {
+                        init: function (this: RotatableObjectState) {
+                            this.isDragging = false;
+                            this.lastX = 0;
+                            this.lastY = 0;
+                            this.currentRotation = { x: 0, y: 0, z: 0 };
+
+                            this.onMouseDown = this.onMouseDown.bind(this);
+                            this.onMouseMove = this.onMouseMove.bind(this);
+                            this.onMouseUp = this.onMouseUp.bind(this);
+
+                            this.el.addEventListener('mousedown', this.onMouseDown);
+                        },
+                        onMouseDown: function (this: RotatableObjectState, evt: any) {
+                            const originalEvent = evt.detail.mouseEvent || evt.detail.touchEvent || evt;
+
+                            // Chỉ nhận chuột GIỮA (button === 1). Chạm tay (touchEvent, không có
+                            // `button`) không kích hoạt xoay kiểu này — để tránh xung đột với kéo
+                            // 1 ngón (di chuyển) vốn đã chiếm chỗ đó trên thiết bị cảm ứng.
+                            if (originalEvent.button !== 1) return;
+
+                            // Chặn hành vi mặc định của trình duyệt khi nhấn chuột giữa (icon
+                            // auto-scroll trên Windows/Linux) — nếu không chặn, vừa xoay asset vừa
+                            // bật auto-scroll cùng lúc, rất khó chịu.
+                            originalEvent.preventDefault?.();
+
+                            this.lastX = originalEvent.clientX;
+                            this.lastY = originalEvent.clientY;
+
+                            // Đọc rotation hiện tại làm điểm xuất phát — cộng dồn lên đây mỗi lần
+                            // rê chuột (xem onMouseMove), không phải giá trị cố định của lúc mousedown.
+                            const rotationAttr = this.el.getAttribute('rotation') || { x: 0, y: 0, z: 0 };
+                            this.currentRotation = { x: rotationAttr.x, y: rotationAttr.y, z: rotationAttr.z };
+
+                            this.isDragging = true;
+                            this.el.emit('rotatestart');
+                            evt.stopPropagation();
+
+                            window.addEventListener('mousemove', this.onMouseMove);
+                            window.addEventListener('mouseup', this.onMouseUp);
+                        },
+                        onMouseMove: function (this: RotatableObjectState, evt: any) {
+                            if (!this.isDragging) return;
+
+                            const dx = evt.clientX - this.lastX;
+                            const dy = evt.clientY - this.lastY;
+                            this.lastX = evt.clientX;
+                            this.lastY = evt.clientY;
+
+                            // Kéo ngang -> xoay quanh trục Y (yaw), kéo dọc -> xoay quanh trục X
+                            // (pitch) — cùng cảm giác với free-fly-controls xoay camera bằng chuột
+                            // phải, chỉ khác đối tượng bị xoay. Cộng dồn trực tiếp lên góc hiện tại
+                            // (không giới hạn khoảng) để có thể xoay tự do nhiều vòng. Cộng lên giá
+                            // trị GỐC (chưa làm tròn/snap) rồi mới làm tròn khi gửi đi, tránh sai số
+                            // làm tròn dồn lại qua nhiều lần rê chuột liên tiếp.
+                            const ROTATE_SENSITIVITY = 0.4;
+                            this.currentRotation.y += dx * ROTATE_SENSITIVITY;
+                            this.currentRotation.x += dy * ROTATE_SENSITIVITY;
+
+                            // Giữ Shift = "hít" (snap) góc xoay về bội số của 45°. Snap chỉ áp dụng
+                            // lên GIÁ TRỊ GỬI ĐI thôi — this.currentRotation vẫn giữ nguyên giá trị
+                            // liên tục chưa snap ở phía sau, nên lúc thả Shift ra giữa chừng, asset
+                            // xoay tiếp mượt mà từ đúng vị trí thật (không bị giật/nhảy do snap đã
+                            // "ăn" mất phần lẻ trước đó).
+                            const SNAP_STEP_DEG = 45;
+                            const displayX = evt.shiftKey
+                                ? Math.round(this.currentRotation.x / SNAP_STEP_DEG) * SNAP_STEP_DEG
+                                : this.currentRotation.x;
+                            const displayY = evt.shiftKey
+                                ? Math.round(this.currentRotation.y / SNAP_STEP_DEG) * SNAP_STEP_DEG
+                                : this.currentRotation.y;
+
+                            const nextRotation = {
+                                x: Math.round(displayX * 100) / 100,
+                                y: Math.round(displayY * 100) / 100,
+                                z: this.currentRotation.z,
+                            };
+
+                            this.el.setAttribute('rotation', nextRotation);
+                            this.el.emit('rotatevalue', nextRotation);
+                        },
+                        onMouseUp: function (this: RotatableObjectState) {
+                            if (!this.isDragging) return;
+                            this.isDragging = false;
+                            this.el.emit('rotateend');
+
+                            window.removeEventListener('mousemove', this.onMouseMove);
+                            window.removeEventListener('mouseup', this.onMouseUp);
+                        },
+                        remove: function (this: RotatableObjectState) {
+                            this.el.removeEventListener('mousedown', this.onMouseDown);
+                            window.removeEventListener('mousemove', this.onMouseMove);
+                            window.removeEventListener('mouseup', this.onMouseUp);
+                        }
+                    });
+                }
+
                 if (!AFRAME.components['axis-handle']) {
                     AFRAME.registerComponent('axis-handle', {
                         schema: {
@@ -586,7 +699,8 @@ export function useAframeScript(): boolean {
                         // theo chuột trái — trái giờ dành riêng cho chọn/kéo asset). Bấm phải lên asset
                         // không ảnh hưởng gì tới thao tác xoay này (draggable-object chỉ nhận chuột trái,
                         // xem useAframeScript.ts phần draggable-object).
-                        // Chuột giữa: tạm thời không có chức năng gì.
+                        // Chuột giữa: xoay ASSET (không phải camera) — xem component 'rotatable-object'
+                        // ở trên, tự bắt sự kiện trên từng entity nên free-fly-controls không cần xử lý.
                         onMouseDown: function (this: FreeFlyControlsState, evt: MouseEvent) {
                             if (evt.button === 2) {
                                 evt.preventDefault();

@@ -61,6 +61,7 @@ interface ArSceneProps {
     onSelectAsset: (assetId: string) => void;
     onDragAsset: (assetId: string, position: { x: number; y: number; z: number }) => void;
     onScaleAsset: (assetId: string, scale: { x: number; y: number; z: number }) => void;
+    onRotateAsset: (assetId: string, rotation: { x: number; y: number; z: number }) => void;
     onBeforeTransformChange: () => void;
 }
 
@@ -145,21 +146,17 @@ function AssetEntity({
     isSelected,
     onSelect,
     onDragPosition,
-    onDragStart,
-    onDragEnd,
-    isDragging,
-    onScale,
     onBeforeChange,
+    onScale,
+    onRotate,
 }: {
     asset: Asset;
     isSelected: boolean;
     onSelect: () => void;
     onDragPosition: (position: { x: number; y: number; z: number }) => void;
-    onDragStart: () => void;
-    onDragEnd: () => void;
-    isDragging: boolean;
-    onScale: (scale: { x: number; y: number; z: number }) => void;
     onBeforeChange: () => void;
+    onScale: (scale: { x: number; y: number; z: number }) => void;
+    onRotate: (rotation: { x: number; y: number; z: number }) => void;
 }) {
     const isVideo = isVideoAsset(asset.fileType, asset.filename);
     const isImage = isImageAsset(asset.fileType, asset.filename);
@@ -184,6 +181,7 @@ function AssetEntity({
         rotation: vectorToString(transform.rotation),
         scale: vectorToString(transform.scale),
         'draggable-object': '',
+        'rotatable-object': '', // chuột giữa + kéo = xoay asset (xem useAframeScript.ts)
         'data-selectable': '', // whitelist cho raycaster của cursor — xem cấu hình ở <Scene>
         'data-selected': isSelected ? 'true' : 'false',
         events: {
@@ -202,13 +200,18 @@ function AssetEntity({
                 // rất dễ không còn nằm đúng trên model lúc buông tay -> 'click' không bắn -> asset
                 // không được chọn, vòng tròn bị "kẹt" ở asset đã chọn trước đó.
                 onSelect();
-                onDragStart();
                 onBeforeChange(); // chốt snapshot undo TRƯỚC khi vị trí bắt đầu thay đổi
             },
             dragposition: (e: any) => onDragPosition(e.detail),
-            dragend: onDragEnd,
             scalestart: onBeforeChange, // trước đây 'scalestart' hoàn toàn chưa được lắng nghe ở đây
             scalevalue: (e: any) => onScale(e.detail),
+            rotatestart: () => {
+                // Cùng logic với dragstart: chọn asset + chốt snapshot undo ngay khi bắt đầu
+                // xoay bằng chuột giữa, trước khi rotation thật sự thay đổi.
+                onSelect();
+                onBeforeChange();
+            },
+            rotatevalue: (e: any) => onRotate(e.detail),
         }
     };
 
@@ -247,31 +250,22 @@ function AssetEntity({
             {!isVideo && !isImage && <Entity primitive="a-gltf-model" data-selectable="" src={asset.url} />}
 
             {isSelected && (
-                <>
-                    {/* Vòng tròn chỉ báo đang chọn (không dùng để kéo xoay nữa — xoay dùng
-                        ô số bên Inspector sidebar cho cả 3 trục, chính xác và gọn hơn). */}
-                    <Entity
-                        geometry="primitive: ring; radiusInner: 0.85; radiusOuter: 0.9"
-                        material={`color: ${isDragging ? '#f59e0b' : '#3b82f6'}; shader: flat; side: double`}
-                        rotation="-90 0 0"
-                    />
-                    {/* Chấm nhỏ ở rìa — kéo ra xa/gần tâm để scale đều 3 trục. */}
-                    <Entity
-                        scale-handle=""
-                        data-selectable=""
-                        geometry="primitive: sphere; radius: 0.06"
-                        material="color: #fbbf24; shader: flat"
-                        position="0.9 0 0"
-                    />
-                </>
+                // Chấm nhỏ ở rìa — kéo ra xa/gần tâm để scale đều 3 trục. (Vòng tròn chỉ báo
+                // chọn trước đây đã bỏ — giờ chuột giữa dùng để xoay asset, xem 'rotatable-object'.)
+                <Entity
+                    scale-handle=""
+                    data-selectable=""
+                    geometry="primitive: sphere; radius: 0.06"
+                    material="color: #fbbf24; shader: flat"
+                    position="0.9 0 0"
+                />
             )}
         </Entity>
     );
 }
 
-export function ArScene({ assets, activeAssetId, onSelectAsset, onDragAsset, onScaleAsset, onBeforeTransformChange }: ArSceneProps) {
+export function ArScene({ assets, activeAssetId, onSelectAsset, onDragAsset, onScaleAsset, onRotateAsset, onBeforeTransformChange }: ArSceneProps) {
     const videoAssets = assets.filter((a) => isVideoAsset(a.fileType, a.filename));
-    const [draggingId, setDraggingId] = useState<string | null>(null);
     const sceneRef = useRef<any>(null);
 
     // A-Frame chỉ tự tính lại kích thước canvas + aspect ratio camera khi bắt được sự kiện
@@ -365,10 +359,8 @@ export function ArScene({ assets, activeAssetId, onSelectAsset, onDragAsset, onS
                             isSelected={isSelected}
                             onSelect={() => onSelectAsset(asset.id)}
                             onDragPosition={(pos) => onDragAsset(asset.id, pos)}
-                            onDragStart={() => setDraggingId(asset.id)}
-                            onDragEnd={() => setDraggingId(null)}
-                            isDragging={asset.id === draggingId}
                             onScale={(scale) => onScaleAsset(asset.id, scale)}
+                            onRotate={(rotation) => onRotateAsset(asset.id, rotation)}
                             onBeforeChange={onBeforeTransformChange}
                         />
                         {isSelected && (
