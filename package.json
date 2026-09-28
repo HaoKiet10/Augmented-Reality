@@ -10,7 +10,8 @@
     "test": "pnpm -r test",
     "lint": "pnpm -r lint",
     "build": "pnpm -r build",
-    "preview": "pnpm --filter frontend preview"
+    "preview": "pnpm --filter frontend preview",
+"db:push": "pnpm --filter backend db:push"
   },
   "workspaces": [
     "frontend",
