@@ -6,42 +6,46 @@ import WebSocket from 'ws';
 @Injectable()
 export class StorageService {
   private readonly logger = new Logger(StorageService.name);
-  private supabase: SupabaseClient | null = null;
+  private supabase: SupabaseClient;
 
   constructor() {
     const supabaseUrl = process.env.SUPABASE_URL;
-    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-    if (supabaseUrl && supabaseKey) {
-      try {
-        this.supabase = createClient(supabaseUrl, supabaseKey, {
-          auth: {
-            persistSession: false,
-          },
-          // Node < 22 chưa có global WebSocket, mà supabase-js khởi tạo Realtime client
-          // ngay khi createClient() chạy -> phải tự cấp transport qua package `ws`,
-          // nếu không constructor sẽ throw và toàn bộ Storage bị vô hiệu (this.supabase = null).
-          realtime: {
-            transport: WebSocket as any,
-          },
-        });
-        this.logger.log('Supabase Storage client initialized successfully.');
-      } catch (err) {
-        this.logger.error('Failed to initialize Supabase client:', err);
-      }
-    } else {
-      this.logger.warn('Supabase credentials not found in env.');
+    // Cố tình KHÔNG fallback sang SUPABASE_ANON_KEY: ghi/xoá file trong bucket
+    // "assets" cần quyền service_role. Nếu thiếu biến này, phải fail cứng ngay
+    // lúc app khởi động (Render sẽ báo đỏ deploy), thay vì âm thầm chạy bằng
+    // anon key rồi lỗi khó hiểu (hoặc tệ hơn, "thành công" với quyền sai) khi
+    // có request upload/xoá thật.
+    if (!supabaseUrl) {
+      throw new Error(
+        'Missing SUPABASE_URL. StorageService requires the service_role key (not the anon key) to upload/delete files in the "assets" bucket.'
+      );
     }
+    if (!supabaseKey) {
+      throw new Error(
+        'Missing SUPABASE_SERVICE_ROLE_KEY. StorageService requires the service_role key (not the anon key) to upload/delete files in the "assets" bucket.'
+      );
+    }
+
+    this.supabase = createClient(supabaseUrl, supabaseKey, {
+      auth: {
+        persistSession: false,
+      },
+      // Node < 22 chưa có global WebSocket, mà supabase-js khởi tạo Realtime client
+      // ngay khi createClient() chạy -> phải tự cấp transport qua package `ws`,
+      // nếu không constructor sẽ throw ngay tại đây (đúng ý muốn: fail sớm).
+      realtime: {
+        transport: WebSocket as any,
+      },
+    });
+    this.logger.log('Supabase Storage client initialized successfully.');
   }
 
   async uploadFile(
     file: Express.Multer.File,
     projectId: string
   ): Promise<{ url: string; storageKey: string }> {
-    if (!this.supabase) {
-      throw new BadRequestException('Supabase Storage is not configured. Please check environment variables.');
-    }
-
     const fileExt = path.extname(file.originalname);
     const uniqueFilename = `${projectId}-${Date.now()}${fileExt}`;
     const storageKey = `assets/${projectId}/${uniqueFilename}`;
@@ -90,10 +94,6 @@ export class StorageService {
     projectId: string,
     originalFilename: string
   ): Promise<{ url: string; storageKey: string }> {
-    if (!this.supabase) {
-      throw new BadRequestException('Supabase Storage is not configured. Please check environment variables.');
-    }
-
     const fileExt = path.extname(originalFilename);
     const uniqueFilename = `${projectId}-${Date.now()}-copy${fileExt}`;
     const destStorageKey = `assets/${projectId}/${uniqueFilename}`;
@@ -119,11 +119,6 @@ export class StorageService {
   }
 
   async deleteFile(storageKey: string): Promise<void> {
-    if (!this.supabase) {
-      this.logger.warn('Supabase is not configured. Skipping delete.');
-      return;
-    }
-
     try {
       await this.supabase.storage.from('assets').remove([storageKey]);
     } catch (err) {
