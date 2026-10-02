@@ -11,7 +11,7 @@
     "lint": "pnpm -r lint",
     "build": "pnpm -r build",
     "preview": "pnpm --filter frontend preview",
-"db:push": "pnpm --filter backend db:push"
+    "db:push": "pnpm --filter backend db:push"
   },
   "workspaces": [
     "frontend",
@@ -70,11 +70,10 @@
     },
     "onlyBuiltDependencies": [
       "@nestjs/core",
-      "@parcel/watcher",
       "@prisma/engines",
+      "@scarf/scarf",
       "bcrypt",
-      "prisma",
-      "unrs-resolver"
+      "prisma"
     ]
   }
 }

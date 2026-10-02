@@ -1,5 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 
@@ -33,6 +34,22 @@ async function bootstrap() {
       transform: true, // tự convert kiểu dữ liệu (VD: query string -> number) theo DTO
     }),
   );
+
+  // Swagger UI ở /docs — chỉ bật ngoài production để không lộ danh sách route
+  // (kể cả route nội bộ) cho người ngoài dò trên domain Render thật.
+  // Repo tách riêng ARMobile cần biết chính xác shape API mà không phải đọc
+  // source backend, nên đây là nguồn tài liệu chung giữa web/backend/mobile.
+  if (process.env.NODE_ENV !== 'production') {
+    const config = new DocumentBuilder()
+      .setTitle('AR API')
+      .setDescription('API cho web designer tool và mobile scan app')
+      .setVersion('1.0.0')
+      .addBearerAuth() // access token dùng Authorization: Bearer <token>, xem jwt.strategy.ts
+      .build();
+    const document = SwaggerModule.createDocument(app, config);
+    SwaggerModule.setup('docs', app, document);
+  }
+
   await app.listen(process.env.PORT || 3000);
   console.log(`Application is running on: ${await app.getUrl()}`);
 }
