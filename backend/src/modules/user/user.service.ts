@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
 
@@ -58,6 +58,24 @@ export class UserService {
         return this.PrismaService.user.findUnique({
             where: { email },
         });
+    }
+
+    /** Đổi mật khẩu cho chính chủ tài khoản — bắt buộc xác nhận currentPassword
+     * trước khi cho đổi, để một access token bị lộ (XSS, để quên máy...) không
+     * đủ để chiếm tài khoản chỉ bằng cách gọi thẳng route đổi mật khẩu. */
+    async changePassword(id: string, currentPassword: string, newPassword: string) {
+        const user = await this.findById(id);
+        if (!user) {
+            throw new NotFoundException('User not found');
+        }
+
+        const isMatch = await bcrypt.compare(currentPassword, user.password);
+        if (!isMatch) {
+            throw new UnauthorizedException('Current password is incorrect');
+        }
+
+        await this.update(id, { password: newPassword });
+        return { message: 'Password updated successfully' };
     }
 
     /** Bỏ field password (hash) trước khi trả user object ra response — không bao giờ
