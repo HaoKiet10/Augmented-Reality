@@ -13,7 +13,10 @@ datasource db {
 model User {
   id        String    @id @default(uuid())
   email     String    @unique
-  password  String
+  // Optional vì user đăng ký qua Google OAuth không có mật khẩu — tài khoản
+  // loại này chỉ login được qua /auth/google, validate() chặn login bằng password.
+  password  String?
+  googleId  String?   @unique
   name      String?
   role      String    @default("designer") // designer, admin
   avatarUrl String? // URL to profile picture in Supabase Storage

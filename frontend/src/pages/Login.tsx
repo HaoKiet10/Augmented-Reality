@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Mail, Lock, Eye, EyeOff, LogIn } from 'lucide-react';
 import { z } from 'zod';
+import { GoogleButton } from '../components/GoogleButton';
 
 const loginSchema = z.object({
   email: z.email('Invalid email address').nonempty('Email is required'),
@@ -12,11 +13,15 @@ const loginSchema = z.object({
 export const Login: React.FC = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  // Backend redirect về /login?error=google_auth_failed khi bước cuối của Google OAuth lỗi.
+  const [error, setError] = useState<string | null>(
+    searchParams.get('error') === 'google_auth_failed' ? 'Google sign-in failed. Please try again.' : null
+  );
   const [validationError, setValidationError] = useState<{ email?: string; password?: string }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -131,6 +136,11 @@ export const Login: React.FC = () => {
             {validationError.password && (
               <p className="mt-1 text-xs text-red-400">{validationError.password}</p>
             )}
+            <div className="mt-2 text-right">
+              <Link to="/forgot-password" className="text-xs text-blue-400 hover:text-blue-300 transition-colors">
+                Forgot password?
+              </Link>
+            </div>
           </div>
 
           {/* Submit */}
@@ -149,6 +159,8 @@ export const Login: React.FC = () => {
             )}
           </button>
         </form>
+
+        <GoogleButton />
 
         {/* Footer */}
         <p className="mt-8 text-center text-sm text-gray-400">

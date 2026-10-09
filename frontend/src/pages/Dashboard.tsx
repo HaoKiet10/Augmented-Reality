@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { LogOut, LayoutDashboard, User as UserIcon, Plus, Folder, Calendar, Trash2, ExternalLink } from 'lucide-react';
 import type { Project } from '../pages/ProjectEditor/types';
@@ -136,7 +136,7 @@ export const Dashboard: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-6">
-            <div className="flex items-center gap-2 text-sm text-gray-300">
+            <Link to="/profile" title="Edit profile" className="flex items-center gap-2 text-sm text-gray-300 hover:text-white transition-colors">
               <UserIcon size={16} className="text-purple-400" />
               <span>{user?.name || user?.email}</span>
               {user?.role && (
@@ -144,7 +144,7 @@ export const Dashboard: React.FC = () => {
                   {user.role}
                 </span>
               )}
-            </div>
+            </Link>
             <button
               onClick={logout}
               className="flex items-center gap-2 px-4 py-2 text-sm font-semibold border border-white/8 hover:border-red-500/30 hover:bg-red-500/10 text-gray-300 hover:text-red-400 rounded-lg transition-all duration-200"

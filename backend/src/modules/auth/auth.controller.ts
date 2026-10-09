@@ -1,12 +1,14 @@
-import { Body, Controller, Post, UseGuards, Req, Res } from '@nestjs/common';
+import { Body, Controller, Post, Get, UseGuards, Req, Res, Logger } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { Response } from 'express';
+import { ConfigService } from '@nestjs/config';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { SignupDto } from './dto/signup.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { JwtRefreshAuthGuard } from './guards/jwt-refresh-auth.guard';
+import { GoogleAuthGuard } from './guards/google-auth.guard';
 import { REFRESH_COOKIE_NAME } from './strategies/refresh-token.strategy';
 
 const REFRESH_COOKIE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
@@ -31,7 +33,12 @@ function refreshCookieOptions() {
 
 @Controller('auth')
 export class AuthController {
-  constructor(private authService: AuthService) { }
+  private readonly logger = new Logger(AuthController.name);
+
+  constructor(
+    private authService: AuthService,
+    private configService: ConfigService,
+  ) { }
 
   @Throttle(AUTH_THROTTLE)
   @Post('login')
@@ -80,5 +87,34 @@ export class AuthController {
   @Post('reset-password')
   async resetPassword(@Body() dto: ResetPasswordDto) {
     return this.authService.resetPassword(dto.token, dto.newPassword);
+  }
+
+  // Bấm "Login with Google" ở frontend -> trỏ thẳng tới GET /auth/google.
+  // Guard chặn request lại và tự redirect sang trang consent của Google,
+  // route handler bên dưới không chạy (Google chưa redirect về).
+  @UseGuards(GoogleAuthGuard)
+  @Get('google')
+  async googleAuth() {}
+
+  // Google redirect về đây kèm ?code=... sau khi user đồng ý. GoogleAuthGuard
+  // chạy GoogleStrategy.validate() (đổi code lấy profile, tìm/tạo user), kết
+  // quả nằm ở req.user. Đây là điều hướng trình duyệt (<a href>, không phải
+  // fetch/XHR), nên không trả JSON được — phải redirect kèm access token trên
+  // URL để SPA đọc rồi lưu vào bộ nhớ, đồng thời set refresh token qua cookie
+  // httpOnly như mọi luồng login khác.
+  @UseGuards(GoogleAuthGuard)
+  @Get('google/callback')
+  async googleCallback(@Req() req: any, @Res() res: Response) {
+    const frontendUrl = this.configService.get<string>('FRONTEND_URL') ?? 'http://localhost:5173';
+
+    try {
+      const { refreshToken, token } = await this.authService.loginWithGoogle(req.user);
+      res.cookie(REFRESH_COOKIE_NAME, refreshToken, refreshCookieOptions());
+      res.redirect(`${frontendUrl}/oauth-callback?token=${encodeURIComponent(token)}`);
+    } catch (err) {
+      // Trước đây lỗi bị nuốt hẳn — người dùng chỉ thấy bị đá về /login mà không ai biết vì sao.
+      this.logger.error(`Google callback failed: ${(err as Error)?.message}`, (err as Error)?.stack);
+      res.redirect(`${frontendUrl}/login?error=google_auth_failed`);
+    }
   }
 }

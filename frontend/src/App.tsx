@@ -11,6 +11,10 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 // chưa chắc dùng tới.
 const Login = lazy(() => import('./pages/Login').then((m) => ({ default: m.Login })));
 const Signup = lazy(() => import('./pages/Signup').then((m) => ({ default: m.Signup })));
+const ForgotPassword = lazy(() => import('./pages/ForgotPassword').then((m) => ({ default: m.ForgotPassword })));
+const ResetPassword = lazy(() => import('./pages/ResetPassword').then((m) => ({ default: m.ResetPassword })));
+const OAuthCallback = lazy(() => import('./pages/OAuthCallback').then((m) => ({ default: m.OAuthCallback })));
+const Profile = lazy(() => import('./pages/Profile').then((m) => ({ default: m.Profile })));
 const Dashboard = lazy(() => import('./pages/Dashboard').then((m) => ({ default: m.Dashboard })));
 const ProjectEditor = lazy(() =>
   import('./pages/ProjectEditor/ProjectEditor').then((m) => ({ default: m.ProjectEditor }))
@@ -34,6 +38,17 @@ function App() {
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/oauth-callback" element={<OAuthCallback />} />
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute>
+                  <Profile />
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="/dashboard"
               element={

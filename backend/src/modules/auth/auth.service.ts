@@ -58,7 +58,7 @@ export class AuthService {
       loginDto.password,
     );
     if (!user) {
-      throw new UnauthorizedException('Invalid credentials');
+      throw new UnauthorizedException('Wrong email or password');
     }
     const { token, refreshToken } = await this.issueTokens(user.id, user.email, user.role);
     return { message: 'Login successful', user: this.userService.sanitize(user), token, refreshToken };
@@ -118,6 +118,13 @@ export class AuthService {
       });
     }
     return { message: 'Logout successful' };
+  }
+
+  /** Issue our own JWT pair for a user already resolved by GoogleStrategy
+   * (findOrCreateByGoogle đã chạy xong ở validate() của strategy). */
+  async loginWithGoogle(user: { id: string; email: string; role: string }) {
+    const { token, refreshToken } = await this.issueTokens(user.id, user.email, user.role);
+    return { user: this.userService.sanitize(user as any), token, refreshToken };
   }
 
   async forgotPassword(email: string) {

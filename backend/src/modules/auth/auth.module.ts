@@ -7,11 +7,12 @@ import { JwtModule } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { RefreshTokenStrategy } from './strategies/refresh-token.strategy';
+import { GoogleStrategy } from './strategies/google.strategy';
 import { JwtRefreshAuthGuard } from './guards/jwt-refresh-auth.guard';
 
 @Module({
     controllers: [AuthController],
-    providers: [AuthService, JwtStrategy, RefreshTokenStrategy, JwtRefreshAuthGuard],
+    providers: [AuthService, JwtStrategy, RefreshTokenStrategy, GoogleStrategy, JwtRefreshAuthGuard],
     exports: [AuthService],
     imports: [UserModule, PrismaModule, JwtModule.registerAsync({
         useFactory: (config: ConfigService) => ({

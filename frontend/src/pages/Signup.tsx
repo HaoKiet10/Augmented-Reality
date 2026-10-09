@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Mail, Lock, User, Eye, EyeOff, UserPlus } from 'lucide-react';
 import { z } from 'zod';
+import { GoogleButton } from '../components/GoogleButton';
 
 const signupSchema = z.object({
   name: z.string().nonempty('Full Name is required'),
@@ -218,6 +219,8 @@ export const Signup: React.FC = () => {
             )}
           </button>
         </form>
+
+        <GoogleButton label="Sign up with Google" />
 
         {/* Footer */}
         <p className="mt-8 text-center text-sm text-gray-400">

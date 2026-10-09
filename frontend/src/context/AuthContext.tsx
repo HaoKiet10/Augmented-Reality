@@ -6,7 +6,14 @@ export interface User {
   email: string;
   role?: string;
   name?: string;
+  avatarUrl?: string | null;
+  hasPassword?: boolean;
+  hasGoogle?: boolean;
 }
+
+/** Backend giới hạn 5 lần/phút cho các route auth — trả 429 với message kỹ thuật,
+ * nên đổi thành câu người dùng đọc được. */
+export const RATE_LIMIT_MESSAGE = 'Too many attempts. Please wait a minute and try again.';
 
 interface AuthContextType {
   user: User | null;
@@ -15,6 +22,9 @@ interface AuthContextType {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   signup: (name: string, email: string, password: string) => Promise<void>;
+  /** Hoàn tất đăng nhập Google: nhận access token từ URL callback, lấy profile rồi lưu phiên. */
+  loginWithToken: (token: string) => Promise<void>;
+  updateUser: (user: User) => void;
   logout: () => void;
   authFetch: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 }
@@ -59,6 +69,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       body: JSON.stringify({ email, password }),
     });
 
+    if (response.status === 429) {
+      throw new Error(RATE_LIMIT_MESSAGE);
+    }
+
     const data = await response.json();
 
     if (!response.ok) {
@@ -82,6 +96,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       body: JSON.stringify({ name, email, password }),
     });
 
+    if (response.status === 429) {
+      throw new Error(RATE_LIMIT_MESSAGE);
+    }
+
     const data = await response.json();
 
     if (!response.ok) {
@@ -93,6 +111,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     setToken(data.token);
     setUser(data.user);
+  };
+
+  const loginWithToken = async (newToken: string) => {
+    let response: Response;
+    try {
+      response = await fetch(`${API_URL}/users/me`, {
+        headers: { Authorization: `Bearer ${newToken}` },
+      });
+    } catch {
+      // fetch chỉ reject khi không tới được server hoặc bị CORS chặn.
+      throw new Error(`Could not reach the API at ${API_URL}. Check VITE_API_URL and the backend CORS_ORIGIN.`);
+    }
+
+    if (!response.ok) {
+      throw new Error(`Google sign-in failed: loading your profile returned HTTP ${response.status}.`);
+    }
+
+    const profile: User = await response.json();
+
+    localStorage.setItem('token', newToken);
+    localStorage.setItem('user', JSON.stringify(profile));
+
+    setToken(newToken);
+    setUser(profile);
+  };
+
+  const updateUser = (updated: User) => {
+    localStorage.setItem('user', JSON.stringify(updated));
+    setUser(updated);
   };
 
   const authFetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
@@ -153,6 +200,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isLoading,
         login,
         signup,
+        loginWithToken,
+        updateUser,
         logout,
         authFetch,
       }}
