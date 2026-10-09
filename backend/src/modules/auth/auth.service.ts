@@ -1,6 +1,6 @@
-import { ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { createHash } from 'crypto';
+import { createHash, randomBytes } from 'crypto';
 import { UserService } from '../user/user.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { LoginDto } from './dto/login.dto';
@@ -8,9 +8,12 @@ import { SignupDto } from './dto/signup.dto';
 import { JwtService } from '@nestjs/jwt';
 
 const REFRESH_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+const RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // 1 hour
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private readonly userService: UserService,
     private readonly prisma: PrismaService,
@@ -117,7 +120,65 @@ export class AuthService {
     return { message: 'Logout successful' };
   }
 
-  async forgotPassword() {
-    // Implement forgot password logic here
+  async forgotPassword(email: string) {
+    const user = await this.userService.findByEmail(email);
+
+    // Luôn trả về cùng 1 message dù email có tồn tại hay không — tránh lộ
+    // thông tin "email này có đăng ký hay không" (user enumeration) cho ai
+    // đó dò danh sách email qua route public này.
+    const genericResult = {
+      message: 'If an account with that email exists, a reset link has been sent.',
+    };
+
+    if (!user) {
+      return genericResult;
+    }
+
+    const rawToken = randomBytes(32).toString('hex');
+
+    await this.prisma.passwordResetToken.create({
+      data: {
+        userId: user.id,
+        tokenHash: this.hashToken(rawToken),
+        expiresAt: new Date(Date.now() + RESET_TOKEN_TTL_MS),
+      },
+    });
+
+    // TODO: chưa nối provider gửi email (Resend/SendGrid/SES...) — chưa có
+    // biến môi trường nào cho SMTP/API key trong .env.example. Tạm thời log
+    // ra để dev/test local vẫn lấy được link. PHẢI thay bằng gửi email thật
+    // trước khi cho end-user dùng thật, vì hiện tại ai đọc được log server
+    // (Render dashboard) cũng lấy được token đặt lại mật khẩu của bất kỳ ai.
+    const resetUrl = `${this.configService.get<string>('FRONTEND_URL') ?? 'http://localhost:5173'}/reset-password?token=${rawToken}`;
+    this.logger.warn(`[DEV ONLY] Password reset link for ${user.email}: ${resetUrl}`);
+
+    return genericResult;
+  }
+
+  async resetPassword(rawToken: string, newPassword: string) {
+    const tokenHash = this.hashToken(rawToken);
+    const stored = await this.prisma.passwordResetToken.findUnique({ where: { tokenHash } });
+
+    if (!stored || stored.usedAt || stored.expiresAt < new Date()) {
+      throw new BadRequestException('Reset link is invalid or has expired');
+    }
+
+    await this.prisma.$transaction([
+      this.prisma.passwordResetToken.update({
+        where: { id: stored.id },
+        data: { usedAt: new Date() },
+      }),
+      // Đổi mật khẩu xong thì coi mọi phiên đăng nhập cũ là không còn tin cậy
+      // (giống hệt logic reuse-detection ở refreshTokens) — buộc đăng nhập lại
+      // ở mọi thiết bị bằng mật khẩu mới.
+      this.prisma.refreshToken.updateMany({
+        where: { userId: stored.userId, revoked: false },
+        data: { revoked: true },
+      }),
+    ]);
+
+    await this.userService.update(stored.userId, { password: newPassword });
+
+    return { message: 'Password has been reset. Please log in again.' };
   }
 }
