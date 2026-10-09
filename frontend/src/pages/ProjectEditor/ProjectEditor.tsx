@@ -207,6 +207,7 @@ export const ProjectEditor: React.FC = () => {
 
                 <ArViewport
                     aframeLoaded={aframeLoaded}
+                    triggerImageUrl={project?.triggerImageUrl ?? null}
                     assets={assets}
                     activeAssetId={activeAsset?.id ?? null}
                     onSelectAsset={(assetId) => {

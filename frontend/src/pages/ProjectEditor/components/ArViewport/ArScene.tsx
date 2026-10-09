@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, memo, Fragment } from 'react';
 import { Entity } from 'aframe-react';
 import type { Asset } from '../../types';
 import { isImageAsset, isVideoAsset } from '../../utils/assetType';
-import { DEFAULT_SPATIAL_CONFIG } from '../../constants';
+import { DEFAULT_SPATIAL_CONFIG, MARKER_PLANE_WIDTH } from '../../constants';
 
 /**
  * Theo dõi trạng thái "đã có frame thật" của từng thẻ <video> trong <a-assets>.
@@ -21,6 +21,9 @@ import { DEFAULT_SPATIAL_CONFIG } from '../../constants';
  */
 function useVideoReadyState(videoElId: string, assetUrl: string) {
     const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
+    // Tỉ lệ khung hình THẬT của video (width/height) — mobile cũng dùng tỉ lệ thật, nên editor
+    // không được ép 16:9 cố định nữa. Fallback 16/9 cho tới khi đọc được kích thước.
+    const [aspect, setAspect] = useState(16 / 9);
     const attemptedUrlRef = useRef<string | null>(null);
 
     useEffect(() => {
@@ -35,12 +38,22 @@ function useVideoReadyState(videoElId: string, assetUrl: string) {
 
         // Video có thể đã sẵn sàng từ trước khi effect này gắn listener (ví dụ
         // component re-mount nhưng thẻ <video> trong <a-assets> vẫn còn sống).
+        const readAspect = () => {
+            if (videoEl.videoWidth > 0 && videoEl.videoHeight > 0) {
+                setAspect(videoEl.videoWidth / videoEl.videoHeight);
+            }
+        };
+
         if (videoEl.readyState >= 2) {
+            readAspect();
             setStatus('ready');
             return;
         }
 
-        const handleLoadedData = () => setStatus('ready');
+        const handleLoadedData = () => {
+            readAspect();
+            setStatus('ready');
+        };
         const handleError = () => setStatus('error');
 
         videoEl.addEventListener('loadeddata', handleLoadedData);
@@ -52,10 +65,32 @@ function useVideoReadyState(videoElId: string, assetUrl: string) {
         };
     }, [videoElId, assetUrl]);
 
-    return status;
+    return { status, aspect };
+}
+
+/** Tỉ lệ khung hình (width/height) của 1 ảnh theo URL — dùng cho mặt phẳng ảnh trigger. */
+function useImageAspect(url: string | null) {
+    const [aspect, setAspect] = useState<number | null>(null);
+    useEffect(() => {
+        setAspect(null);
+        if (!url) return;
+        let cancelled = false;
+        const img = new Image();
+        img.onload = () => {
+            if (!cancelled && img.naturalWidth > 0 && img.naturalHeight > 0) {
+                setAspect(img.naturalWidth / img.naturalHeight);
+            }
+        };
+        img.src = url;
+        return () => {
+            cancelled = true;
+        };
+    }, [url]);
+    return aspect;
 }
 
 interface ArSceneProps {
+    triggerImageUrl: string | null;
     assets: Asset[];
     activeAssetId: string | null;
     onSelectAsset: (assetId: string) => void;
@@ -74,12 +109,13 @@ function vectorToString(v: { x: number; y: number; z: number }) {
  * nên React sẽ bỏ qua re-render nó khi ArScene re-render (do kéo/scale asset khác).
  * Nếu không tách, aframe-react sẽ gọi lại setAttribute('position', '0 1.6 0') mỗi lần
  * ArScene render lại — xoá sạch vị trí camera đã bay tới bằng WASD (free-fly-controls).
+ * Camera mặc định đứng trước ảnh trigger (gốc toạ độ), nhìn thẳng vào tâm ảnh.
  */
 const CameraRig = memo(function CameraRig() {
     return (
         <Entity
             primitive="a-camera"
-            position="0 1.6 0"
+            position="0 0.3 2.4"
             wasd-controls="enabled: false"
             look-controls="enabled: false"
             free-fly-controls="speed: 0.08"
@@ -165,12 +201,14 @@ function AssetEntity({
     // Luôn gọi hook (tuân thủ rules-of-hooks) — với asset không phải video thì
     // videoElId trỏ tới 1 <video> không tồn tại, hook chỉ đứng yên ở 'loading'
     // và giá trị đó không được dùng ở nhánh render bên dưới.
-    const videoStatus = useVideoReadyState(videoElId, asset.url);
+    const { status: videoStatus, aspect: videoAspect } = useVideoReadyState(videoElId, asset.url);
 
-    // Giữ chiều rộng cố định 1.6 (đơn vị scene) và suy ra chiều cao theo đúng tỉ lệ
+    // Bề rộng mặt phẳng = MARKER_PLANE_WIDTH (1 đơn vị = 100% bề rộng ảnh trigger) — scale 1 nghĩa là
+    // rộng bằng ảnh trigger, đúng quy ước README. Giữ chiều rộng cố định (đơn vị scene) và suy ra chiều cao theo đúng tỉ lệ
     // khung hình gốc của ảnh (width/height tính bằng px, lưu lúc upload) — nếu không
     // có dữ liệu này (asset cũ / không đọc được), fallback về hình vuông 1.6x1.6 như cũ.
-    const IMAGE_PLANE_WIDTH = 1.6;
+    const IMAGE_PLANE_WIDTH = MARKER_PLANE_WIDTH;
+    const videoPlaneHeight = MARKER_PLANE_WIDTH / videoAspect;
     const imagePlaneHeight =
         asset.width && asset.height
             ? IMAGE_PLANE_WIDTH * (asset.height / asset.width)
@@ -218,7 +256,7 @@ function AssetEntity({
     return (
         <Entity {...entityProps}>
             {isVideo && videoStatus === 'ready' && (
-                <Entity primitive="a-video" data-selectable="" src={`#${videoElId}`} width="1.6" height="0.9" material="side: double" />
+                <Entity primitive="a-video" data-selectable="" src={`#${videoElId}`} width={String(MARKER_PLANE_WIDTH)} height={String(videoPlaneHeight)} material="side: double" />
             )}
             {isVideo && videoStatus === 'loading' && (
                 // Placeholder trung tính trong lúc video chưa có frame thật — thay cho
@@ -228,8 +266,8 @@ function AssetEntity({
                 <Entity
                     primitive="a-plane"
                     data-selectable=""
-                    width="1.6"
-                    height="0.9"
+                    width={String(MARKER_PLANE_WIDTH)}
+                    height={String(videoPlaneHeight)}
                     material="color: #1f2937; shader: flat; side: double; opacity: 0.85"
                 />
             )}
@@ -239,8 +277,8 @@ function AssetEntity({
                 <Entity
                     primitive="a-plane"
                     data-selectable=""
-                    width="1.6"
-                    height="0.9"
+                    width={String(MARKER_PLANE_WIDTH)}
+                    height={String(videoPlaneHeight)}
                     material="color: #7f1d1d; shader: flat; side: double; opacity: 0.85"
                 />
             )}
@@ -255,18 +293,20 @@ function AssetEntity({
                 <Entity
                     scale-handle=""
                     data-selectable=""
-                    geometry="primitive: sphere; radius: 0.06"
+                    geometry="primitive: sphere; radius: 0.035"
                     material="color: #fbbf24; shader: flat"
-                    position="0.9 0 0"
+                    position="0.6 0 0"
                 />
             )}
         </Entity>
     );
 }
 
-export function ArScene({ assets, activeAssetId, onSelectAsset, onDragAsset, onScaleAsset, onRotateAsset, onBeforeTransformChange }: ArSceneProps) {
+export function ArScene({ triggerImageUrl, assets, activeAssetId, onSelectAsset, onDragAsset, onScaleAsset, onRotateAsset, onBeforeTransformChange }: ArSceneProps) {
     const videoAssets = assets.filter((a) => isVideoAsset(a.fileType, a.filename));
     const sceneRef = useRef<any>(null);
+    const triggerAspect = useImageAspect(triggerImageUrl);
+    const triggerHeight = MARKER_PLANE_WIDTH / (triggerAspect ?? 1);
 
     // A-Frame chỉ tự tính lại kích thước canvas + aspect ratio camera khi bắt được sự kiện
     // 'resize' của WINDOW (xem AFRAME.utils.device / core resize system) — nó KHÔNG theo dõi
@@ -340,8 +380,27 @@ export function ArScene({ assets, activeAssetId, onSelectAsset, onDragAsset, onS
                 ))}
             </a-assets>
 
-            {/* Environment & Floor */}
-            <Entity primitive="a-plane" position="0 0 0" rotation="-90 0 0" width="30" height="30" color="#2c3e50" opacity="0.3" />
+            {/* Mặt phẳng ảnh trigger = hệ toạ độ tham chiếu của designer: tâm ở gốc (0,0,0), rộng đúng
+                1 đơn vị, đứng thẳng (mặt XY). KHÔNG có data-selectable nên không bị raycaster bắt /
+                kéo nhầm. Bán trong suốt để vẫn nhìn thấy asset đặt sát/đè lên nó. */}
+            {triggerImageUrl ? (
+                <Entity
+                    primitive="a-image"
+                    src={triggerImageUrl}
+                    width={String(MARKER_PLANE_WIDTH)}
+                    height={String(triggerHeight)}
+                    position="0 0 0"
+                    material="side: double; transparent: true; opacity: 0.6"
+                />
+            ) : (
+                <Entity
+                    primitive="a-plane"
+                    width={String(MARKER_PLANE_WIDTH)}
+                    height={String(MARKER_PLANE_WIDTH)}
+                    position="0 0 0"
+                    material="color: #334155; shader: flat; side: double; transparent: true; opacity: 0.5"
+                />
+            )}
             <Entity primitive="a-sky" color="#0d0e12" />
 
             {/* Lights */}
@@ -373,11 +432,6 @@ export function ArScene({ assets, activeAssetId, onSelectAsset, onDragAsset, onS
                     </Fragment>
                 );
             })}
-
-            {/* Grid indicator to help align */}
-            <Entity position="0 0.01 0" rotation="90 0 0" className="grid-helper">
-                <Entity primitive="a-plane" width="10" height="10" color="#ffffff" opacity="0.05" material="wireframe: true" />
-            </Entity>
 
             {/* Camera controls */}
             <CameraRig />

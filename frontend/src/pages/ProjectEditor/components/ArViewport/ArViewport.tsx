@@ -6,6 +6,7 @@ import { ArSceneErrorBoundary } from './ArSceneErrorBoundary';
 
 interface ArViewportProps {
     aframeLoaded: boolean;
+    triggerImageUrl: string | null;
     assets: Asset[];
     activeAssetId: string | null;
     onSelectAsset: (assetId: string) => void;
@@ -15,7 +16,7 @@ interface ArViewportProps {
     onBeforeTransformChange: () => void;
 }
 
-export function ArViewport({ aframeLoaded, assets, activeAssetId, onSelectAsset, onDragAsset, onScaleAsset, onRotateAsset, onBeforeTransformChange }: ArViewportProps) {
+export function ArViewport({ aframeLoaded, triggerImageUrl, assets, activeAssetId, onSelectAsset, onDragAsset, onScaleAsset, onRotateAsset, onBeforeTransformChange }: ArViewportProps) {
     const activeAsset = assets.find((a) => a.id === activeAssetId) ?? null;
 
     return (
@@ -40,6 +41,7 @@ export function ArViewport({ aframeLoaded, assets, activeAssetId, onSelectAsset,
                 <div className="absolute inset-0 w-full h-full">
                     <ArSceneErrorBoundary>
                         <ArScene
+                            triggerImageUrl={triggerImageUrl}
                             assets={assets}
                             activeAssetId={activeAssetId}
                             onSelectAsset={onSelectAsset}
