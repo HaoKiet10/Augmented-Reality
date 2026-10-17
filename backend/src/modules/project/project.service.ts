@@ -4,6 +4,9 @@ import { StorageService } from './storage.service';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { validateUploadedFile, ALLOWED_TRIGGER_IMAGE_TYPES } from './asset-validation';
 
+/** Trần số ảnh trong 1 AugmentedImageDatabase của ARCore — mobile không nạp được nhiều hơn. */
+export const MAX_SCAN_TRIGGERS = 1000;
+
 @Injectable()
 export class ProjectService {
   constructor(
@@ -212,5 +215,20 @@ export class ProjectService {
       triggerImageUrl: project.triggerImageUrl,
       assets: project.assets,
     };
+  }
+
+  /**
+   * Danh sách trigger image của MỌI project đã published — mobile dùng để dựng database nhận diện
+   * (ARCore AugmentedImageDatabase), tự nhận ra project khi người dùng soi vào ảnh trigger mà
+   * không cần nhập Project ID. Chỉ trả field tối thiểu, không kèm assets (mobile gọi
+   * GET /public/projects/:id sau khi nhận ra project).
+   */
+  async listPublishedTriggers() {
+    return this.prisma.project.findMany({
+      where: { status: 'published', triggerImageUrl: { not: null } },
+      select: { id: true, name: true, triggerImageUrl: true },
+      orderBy: { updatedAt: 'desc' },
+      take: MAX_SCAN_TRIGGERS,
+    });
   }
 }

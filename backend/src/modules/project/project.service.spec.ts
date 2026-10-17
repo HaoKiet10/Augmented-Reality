@@ -281,6 +281,23 @@ describe('ProjectService', () => {
     });
   });
 
+  describe('listPublishedTriggers', () => {
+    it('chỉ lấy project published có trigger image, field tối thiểu, giới hạn 1000', async () => {
+      const rows = [{ id: 'p1', name: 'A', triggerImageUrl: 'https://x/a.jpg' }];
+      prisma.project.findMany.mockResolvedValue(rows);
+
+      const result = await service.listPublishedTriggers();
+
+      expect(result).toEqual(rows);
+      expect(prisma.project.findMany).toHaveBeenCalledWith({
+        where: { status: 'published', triggerImageUrl: { not: null } },
+        select: { id: true, name: true, triggerImageUrl: true },
+        orderBy: { updatedAt: 'desc' },
+        take: 1000,
+      });
+    });
+  });
+
   describe('setTriggerImage', () => {
     const pngFile = {
       originalname: 'trigger.png',

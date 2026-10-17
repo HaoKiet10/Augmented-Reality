@@ -10,6 +10,12 @@ import { ProjectService } from './project.service';
 export class ScanController {
   constructor(private readonly projectService: ProjectService) { }
 
+  /** Phải khai báo TRƯỚC ':id' để 'GET /public/projects' không bị nuốt bởi route có param. */
+  @Get()
+  async listPublishedTriggers() {
+    return this.projectService.listPublishedTriggers();
+  }
+
   @Get(':id')
   async getPublishedProject(@Param('id') id: string) {
     return this.projectService.findPublishedForScan(id);
