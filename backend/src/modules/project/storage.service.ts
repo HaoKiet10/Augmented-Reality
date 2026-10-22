@@ -118,6 +118,23 @@ export class StorageService {
     return { url: urlData.publicUrl, storageKey: destStorageKey };
   }
 
+  /** Upload bytes do server tự sinh ra (vd: database nhận diện .imgdb) vào đúng storageKey cho trước. */
+  async uploadBuffer(storageKey: string, buffer: Buffer, contentType: string): Promise<string> {
+    const { error } = await this.supabase.storage
+      .from('assets')
+      .upload(storageKey, buffer, { contentType, upsert: true });
+
+    if (error) {
+      throw new Error(`Supabase upload error (${storageKey}): ${error.message}`);
+    }
+
+    const { data: urlData } = this.supabase.storage.from('assets').getPublicUrl(storageKey);
+    if (!urlData?.publicUrl) {
+      throw new Error(`Failed to generate public URL for ${storageKey}`);
+    }
+    return urlData.publicUrl;
+  }
+
   async deleteFile(storageKey: string): Promise<void> {
     try {
       await this.supabase.storage.from('assets').remove([storageKey]);

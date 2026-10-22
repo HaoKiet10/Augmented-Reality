@@ -6,7 +6,8 @@ REST API cho hệ thống AR: quản lý project/asset của designer (web) và 
 
 - **NestJS** (Express) + TypeScript
 - **Prisma ORM** + PostgreSQL (Supabase)
-- **Supabase Storage** — lưu trigger image + asset (model 3D/ảnh/video)
+- **Supabase Storage** — lưu trigger image + asset (model 3D/ảnh/video) + database nhận diện `.imgdb`
+- **sharp** + **`arcoreimg`** (tool của Google) — dựng database nhận diện ảnh ARCore cho mobile
 - **JWT** (access + refresh token qua cookie) cho auth designer
 
 ## Cài đặt
@@ -32,6 +33,7 @@ pnpm --filter backend dev
 | `JWT_SECRET`, `JWT_REFRESH_SECRET` | Ký JWT access/refresh token |
 | `PORT` | Cổng chạy server (mặc định `3000`) |
 | `CORS_ORIGIN` | Danh sách domain frontend được phép gọi API, phân tách bằng dấu phẩy — bỏ trống ở local để dùng mặc định |
+| `ARCOREIMG_PATH` | Đường dẫn tới `arcoreimg` (mặc định tìm `arcoreimg` trong `PATH`). Image Docker đã cài sẵn; chạy local trên Windows thì trỏ tới `arcoreimg.exe` tải từ [arcore-android-sdk](https://github.com/google-ar/arcore-android-sdk/tree/main/tools/arcoreimg) |
 
 ## Cấu trúc module (`src/modules/`)
 
@@ -39,7 +41,7 @@ pnpm --filter backend dev
 |---|---|
 | `auth/` | Đăng ký/đăng nhập, JWT access + refresh token (refresh token lưu qua httpOnly cookie) |
 | `user/` | Quản lý user |
-| `project/` | Project, Asset, publish/unpublish, route public cho mobile |
+| `project/` | Project, Asset, publish/unpublish, route public cho mobile, dựng database nhận diện (`trigger-db.service.ts`) |
 | `prisma/` | Prisma service dùng chung |
 
 ## Route API
@@ -77,15 +79,21 @@ pnpm --filter backend dev
 | `DELETE` | `/projects/:id/assets/:assetId` | Xoá asset |
 | `PATCH` | `/projects/:id/assets/:assetId/transform` | Cập nhật position/rotation/scale |
 
-### Scan (`/public/projects`) — **không cần auth**
+### Scan (`/public/...`) — **không cần auth**
 
 | Method | Route | Mô tả |
 |---|---|---|
+| `GET` | `/public/trigger-db` | Database nhận diện dựng sẵn: `{ version, url, sha256, size, triggers: [{ id, name }] }`. `url = null` khi chưa có project nào publish; **503** khi chưa dựng xong lần đầu hoặc thiếu `arcoreimg` |
 | `GET` | `/public/projects/:id` | Dùng cho mobile app quét — chỉ trả project đã `published`, không lộ field nội bộ (`designerId`, `storageKey`...) |
+| `GET` | `/public/projects` | Danh sách trigger image đã publish — chỉ còn để tương thích app bản cũ (app mới dùng `/public/trigger-db`) |
+
+## Database nhận diện (`trigger-db.service.ts`)
+
+Dựng lại tự động khi publish/unpublish, đổi/xoá trigger image, xoá project đang publish, và lúc khởi động; không đổi gì thì bỏ qua. Ảnh ARCore không dùng được bị loại kèm lý do (log `Bỏ ảnh trigger của project ...`, field `skipped` trong bảng `Configuration`, key `triggerDb`). Chi tiết luồng: xem mục *Database nhận diện ảnh* trong README gốc.
 
 ## Quy ước transform asset
 
-`position`/`rotation`/`scale` lưu dạng số **tương đối** theo chiều rộng trigger image (`scale: 1` = 100%), không phải mét thật — xem chi tiết trong README của `frontend/` và `mobile/`.
+`position`/`rotation`/`scale` lưu dạng số **tương đối** theo chiều rộng trigger image (`scale: 1` = 100%), không phải mét thật — xem chi tiết trong README gốc và repo `ARMobile`.
 
 ## Publish — điều kiện bắt buộc
 

@@ -3,15 +3,16 @@ import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from './storage.service';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { validateUploadedFile, ALLOWED_TRIGGER_IMAGE_TYPES } from './asset-validation';
+import { TriggerDbService, MAX_SCAN_TRIGGERS } from './trigger-db.service';
 
-/** Trần số ảnh trong 1 AugmentedImageDatabase của ARCore — mobile không nạp được nhiều hơn. */
-export const MAX_SCAN_TRIGGERS = 1000;
+export { MAX_SCAN_TRIGGERS };
 
 @Injectable()
 export class ProjectService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly storageService: StorageService
+    private readonly storageService: StorageService,
+    private readonly triggerDb: TriggerDbService
   ) { }
 
   async findAll(designerId: string) {
@@ -85,9 +86,11 @@ export class ProjectService {
       where: { projectId: id },
     });
 
-    return this.prisma.project.delete({
+    const deleted = await this.prisma.project.delete({
       where: { id },
     });
+    if (project.status === 'published') this.triggerDb.scheduleRebuild();
+    return deleted;
   }
 
   // --- TRIGGER IMAGE ---
@@ -107,13 +110,15 @@ export class ProjectService {
 
     const { url, storageKey } = await this.storageService.uploadFile(file, projectId);
 
-    return this.prisma.project.update({
+    const updated = await this.prisma.project.update({
       where: { id: projectId },
       data: {
         triggerImage: storageKey,
         triggerImageUrl: url,
       },
     });
+    if (project.status === 'published') this.triggerDb.scheduleRebuild();
+    return updated;
   }
 
   async deleteTriggerImage(projectId: string, designerId: string) {
@@ -129,13 +134,15 @@ export class ProjectService {
       console.error('Failed to delete trigger image file:', err);
     }
 
-    return this.prisma.project.update({
+    const updated = await this.prisma.project.update({
       where: { id: projectId },
       data: {
         triggerImage: null,
         triggerImageUrl: null,
       },
     });
+    if (project.status === 'published') this.triggerDb.scheduleRebuild();
+    return updated;
   }
 
   // --- PUBLISH ---
@@ -160,25 +167,29 @@ export class ProjectService {
       );
     }
 
-    return this.prisma.project.update({
+    const updated = await this.prisma.project.update({
       where: { id: projectId },
       data: {
         status: 'published',
         publishedAt: new Date(),
       },
     });
+    this.triggerDb.scheduleRebuild();
+    return updated;
   }
 
   async unpublish(projectId: string, designerId: string) {
     await this.findOne(projectId, designerId);
 
-    return this.prisma.project.update({
+    const updated = await this.prisma.project.update({
       where: { id: projectId },
       data: {
         status: 'draft',
         publishedAt: null,
       },
     });
+    this.triggerDb.scheduleRebuild();
+    return updated;
   }
 
   // --- PUBLIC SCAN (không cần auth) ---

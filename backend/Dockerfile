@@ -5,6 +5,12 @@
 
 FROM node:20-slim AS base
 RUN corepack enable && corepack prepare pnpm@10.33.4 --activate
+
+# Tool của Google dựng database nhận diện ảnh ARCore (.imgdb) — dùng bởi TriggerDbService.
+# Ghim theo commit cuối cùng sửa binary này (2018) để build lặp lại được.
+ADD https://raw.githubusercontent.com/google-ar/arcore-android-sdk/05af7029a052b8546949910fbfede0ba460dfafd/tools/arcoreimg/linux/arcoreimg /usr/local/bin/arcoreimg
+RUN chmod 755 /usr/local/bin/arcoreimg
+
 WORKDIR /app
 
 # Copy trước phần khai báo workspace + package.json để tận dụng Docker layer cache

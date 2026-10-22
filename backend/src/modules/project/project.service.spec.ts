@@ -3,6 +3,7 @@ import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { ProjectService } from './project.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from './storage.service';
+import { TriggerDbService } from './trigger-db.service';
 
 describe('ProjectService', () => {
   let service: ProjectService;
@@ -19,6 +20,7 @@ describe('ProjectService', () => {
     };
   };
   let storageService: { uploadFile: jest.Mock; deleteFile: jest.Mock };
+  let triggerDb: { scheduleRebuild: jest.Mock };
 
   const designerId = 'designer-1';
   const projectId = 'project-1';
@@ -40,12 +42,14 @@ describe('ProjectService', () => {
       uploadFile: jest.fn(),
       deleteFile: jest.fn(),
     };
+    triggerDb = { scheduleRebuild: jest.fn() };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ProjectService,
         { provide: PrismaService, useValue: prisma },
         { provide: StorageService, useValue: storageService },
+        { provide: TriggerDbService, useValue: triggerDb },
       ],
     }).compile();
 
