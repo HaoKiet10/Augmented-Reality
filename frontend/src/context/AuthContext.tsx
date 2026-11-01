@@ -143,7 +143,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const authFetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
-    let currentToken = token || localStorage.getItem('token');
+    const currentToken = token || localStorage.getItem('token');
     const headers = new Headers(init?.headers || {});
 
     if (currentToken && !headers.has('Authorization')) {
