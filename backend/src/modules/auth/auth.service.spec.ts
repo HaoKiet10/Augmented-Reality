@@ -224,4 +224,37 @@ describe('AuthService', () => {
       expect(result).toEqual({ message: 'Logout successful' });
     });
   });
+
+  // Dùng JwtService THẬT (không mock sign) vì lỗi nằm ở nội dung token: iat chỉ tính theo giây, nên 2 lần
+  // ký cùng payload trong cùng 1 giây ra token giống hệt -> trùng tokenHash (@unique) -> 500 lần login thứ 2.
+  describe('refresh token duy nhất', () => {
+    beforeEach(async () => {
+      jest.useFakeTimers({ now: new Date('2026-10-27T08:00:00.500Z') }); // đóng băng đồng hồ: chắc chắn cùng 1 giây
+      const module: TestingModule = await Test.createTestingModule({
+        providers: [
+          AuthService,
+          { provide: UserService, useValue: userService },
+          { provide: PrismaService, useValue: prisma },
+          { provide: JwtService, useValue: new JwtService({ secret: 'access-secret' }) },
+          { provide: ConfigService, useValue: configService },
+        ],
+      }).compile();
+      service = module.get<AuthService>(AuthService);
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    it('2 lần login trong cùng 1 giây cho ra refresh token (và tokenHash lưu DB) khác nhau', async () => {
+      userService.validate.mockResolvedValue(fakeUser);
+
+      const first = await service.login({ email: 'a@test.com', password: 'right' });
+      const second = await service.login({ email: 'a@test.com', password: 'right' });
+
+      expect(second.refreshToken).not.toBe(first.refreshToken);
+      const [firstHash, secondHash] = prisma.refreshToken.create.mock.calls.map(([arg]) => arg.data.tokenHash);
+      expect(secondHash).not.toBe(firstHash);
+    });
+  });
 });

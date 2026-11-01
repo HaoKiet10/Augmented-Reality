@@ -1,6 +1,6 @@
 import { BadRequestException, ConflictException, Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { createHash, randomBytes } from 'crypto';
+import { createHash, randomBytes, randomUUID } from 'crypto';
 import { UserService } from '../user/user.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { LoginDto } from './dto/login.dto';
@@ -38,6 +38,9 @@ export class AuthService {
       {
         secret: this.configService.getOrThrow<string>('JWT_REFRESH_SECRET'),
         expiresIn: '7d',
+        // jti ngẫu nhiên: iat chỉ tính theo giây, thiếu nó thì 2 lần login/refresh trong cùng 1 giây
+        // ra token giống hệt -> trùng tokenHash (@unique) -> 500
+        jwtid: randomUUID(),
       },
     );
 
