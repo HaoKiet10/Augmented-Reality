@@ -67,7 +67,7 @@ erDiagram
     }
 ```
 
-Bảng `Configuration` độc lập, chưa thấy code dùng nên không vẽ ở đây.
+Bảng `Configuration` (key/value JSON) độc lập, không vẽ ở đây. Hiện dùng một key: `triggerDb`, lưu thông tin database nhận diện mới nhất ([[Trigger-Database]]).
 
 Mọi quan hệ từ User đều `onDelete: Cascade`; xoá Project cũng xoá Asset của nó.
 

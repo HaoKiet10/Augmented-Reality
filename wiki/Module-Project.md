@@ -11,12 +11,13 @@ tags: [backend, ar]
 |---|---|
 | `ProjectController` | CRUD project, trigger image, publish/unpublish → [[API-Projects]] |
 | `AssetController` | CRUD asset, transform, duplicate, restore → [[API-Assets]] |
-| `ScanController` | Route public cho mobile → [[API-Public-Scan]] |
+| `ScanController`, `TriggerDbController` | Route public cho mobile → [[API-Public-Scan]] |
 | `ProjectService` | Logic project; `publish` kiểm tra điều kiện ([[Publish-Flow]]); `findPublishedForScan` |
 | `AssetService` | Logic asset; giới hạn tổng 5 MB mỗi project |
+| `TriggerDbService` | Dựng database nhận diện `.imgdb` bằng `arcoreimg` → [[Trigger-Database]] |
 | `StorageService` | Làm việc với [[Supabase-Storage]] |
 | `asset-validation.ts` | Whitelist loại file + kiểm tra magic bytes → [[Upload-Validation]] |
-| DTO | `CreateProjectDto`, `UpdateProjectDto`, `UpdateAssetTransformDto` |
+| DTO | `CreateProjectDto`, `UpdateProjectDto`, `UpdateAssetTransformDto`; `SetTriggerDimensionsDto` còn sót từ thời ViroReact, không route nào dùng ([[Roadmap]]) |
 
 Quyền sở hữu: mọi method nhận `designerId` lấy từ JWT, nên designer chỉ thao tác trên project của chính mình. `UpdateProjectDto` chỉ cho sửa `name`, `description`, `lastOpenedAt`; `status` chỉ đổi qua publish/unpublish.
 

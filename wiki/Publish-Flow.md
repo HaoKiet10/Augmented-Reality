@@ -30,6 +30,7 @@ flowchart TD
     M2 --> E
     E -- "không" --> X["400, nêu rõ phần còn thiếu"]
     E -- "có" --> OK["status = published<br/>publishedAt = now"]
+    OK --> R["Hẹn dựng lại database nhận diện"]
 ```
 
 ## Điều kiện publish (`ProjectService.publish`, [[Module-Project]])
@@ -40,6 +41,7 @@ Thiếu một trong hai là lỗi 400, thông báo liệt kê phần còn thiế
 Thành công thì đặt `status = published` và `publishedAt = now`. `POST /projects/:id/unpublish` đưa về `draft` và xoá `publishedAt` ([[API-Projects]]).
 
 ## Hệ quả
+- Publish, unpublish, đổi/xoá trigger image hay xoá project đang publish đều hẹn dựng lại database nhận diện sau khoảng 3 giây ([[Trigger-Database]]); trước khi dựng xong, mobile chưa nhận ra ảnh mới.
 - Chỉ project `published` mới truy cập được bằng route public ([[API-Public-Scan]]), nên [[Mobile-App]] chỉ quét được project đã công bố.
 - Sau khi publish, designer vẫn sửa được asset; thay đổi có hiệu lực ngay với người quét vì mobile đọc dữ liệu trực tiếp.
 - Nút Publish/Unpublish nằm ở header của [[Project-Editor]].

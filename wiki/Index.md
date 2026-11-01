@@ -26,7 +26,7 @@ tags: [hub]
 - [[Auth-Tokens]] · [[Auth-Google-OAuth]] · [[Auth-Password-Reset]] · [[Rate-Limiting]] · [[Security-Notes]]
 
 ## Nghiệp vụ AR
-- [[Publish-Flow]] · [[Upload-Validation]] · [[Asset-Transform]] · [[Mobile-App]]
+- [[Publish-Flow]] · [[Upload-Validation]] · [[Asset-Transform]] · [[Trigger-Database]] · [[Mobile-App]]
 
 ## Vận hành
 - [[Environment-Variables]] · [[Deployment]] · [[Troubleshooting]]

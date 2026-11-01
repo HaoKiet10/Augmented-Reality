@@ -19,6 +19,7 @@ tags: [ops, security]
 | `FRONTEND_URL` | nên có | Đích redirect sau Google và gốc của link reset mật khẩu; mặc định `http://localhost:5173` |
 | `CORS_ORIGIN` | nên có | Danh sách domain frontend, cách nhau dấu phẩy; mặc định `localhost:5173` + domain Vercel |
 | `PORT` | không | Mặc định 3000 |
+| `ARCOREIMG_PATH` | không | Đường dẫn tool `arcoreimg` dựng database nhận diện; mặc định `arcoreimg` trong PATH (image Docker có sẵn). Chạy local trên Windows trỏ tới `arcoreimg.exe` ([[Trigger-Database]]) |
 | `NODE_ENV` | không | `production` bật cookie Secure/SameSite=None và tắt [[Swagger-Docs]] |
 
 `JWT_*`, `GOOGLE_*` dùng `getOrThrow`: thiếu thì app dừng ngay lúc khởi động, thay vì lỗi muộn.
