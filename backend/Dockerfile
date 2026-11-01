@@ -3,7 +3,7 @@
 #   Dockerfile path: backend/Dockerfile
 #   Docker build context: . (repo root)
 
-FROM node:20-slim AS base
+FROM node:24-slim AS base
 RUN corepack enable && corepack prepare pnpm@10.33.4 --activate
 
 # Tool của Google dựng database nhận diện ảnh ARCore (.imgdb) — dùng bởi TriggerDbService.
