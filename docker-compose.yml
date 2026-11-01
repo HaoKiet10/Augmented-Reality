@@ -1,0 +1,27 @@
+# Postgres CHỈ dùng cho phát triển local — không liên quan tới deploy (Render dùng backend/Dockerfile).
+#   docker compose up -d      # bật
+#   docker compose down       # tắt (dữ liệu vẫn giữ trong volume)
+#   docker compose down -v    # tắt + XOÁ sạch dữ liệu
+# backend/.env: DIRECT_URL=postgresql://postgres:postgres@localhost:5432/ar_dev
+
+services:
+  db:
+    image: postgres:17-alpine
+    container_name: ar-dev-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: ar_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - ar-dev-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ar_dev"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  ar-dev-db:
