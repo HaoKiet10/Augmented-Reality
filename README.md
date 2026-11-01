@@ -126,10 +126,10 @@ packages:
   ```bash
   cd ARMobile
   pnpm install
-  pnpm exec react-native start
+  pnpm start
   # cửa sổ khác:
   adb reverse tcp:8081 tcp:8081
-  pnpm exec react-native run-android
+  pnpm android
   ```
 
 ## Package manager
