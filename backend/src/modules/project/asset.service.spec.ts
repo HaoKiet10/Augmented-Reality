@@ -74,14 +74,14 @@ describe('AssetService', () => {
   });
 
   describe('getAssets', () => {
-    it('verify quyền truy cập project trước khi trả asset', async () => {
+    it('verify quyền truy cập project trước khi trả asset, bỏ qua asset đã soft-delete', async () => {
       prisma.asset.findMany.mockResolvedValue([{ id: 'a1' }]);
 
       const result = await service.getAssets(projectId, designerId);
 
       expect(projectService.findOne).toHaveBeenCalledWith(projectId, designerId);
       expect(prisma.asset.findMany).toHaveBeenCalledWith({
-        where: { projectId },
+        where: { projectId, deletedAt: null },
         orderBy: { createdAt: 'desc' },
       });
       expect(result).toEqual([{ id: 'a1' }]);
@@ -151,15 +151,42 @@ describe('AssetService', () => {
       expect(storageService.deleteFile).not.toHaveBeenCalled();
     });
 
-    it('xoá file storage + record DB, trả success khi asset tồn tại', async () => {
+    it('soft-delete (đặt deletedAt), GIỮ file storage để còn undo, trả success khi asset tồn tại', async () => {
       prisma.asset.findFirst.mockResolvedValue({ id: assetId, storageKey: 'assets/x.png' });
-      prisma.asset.delete.mockResolvedValue({});
+      prisma.asset.update.mockResolvedValue({});
 
       const result = await service.deleteAsset(projectId, assetId, designerId);
 
-      expect(storageService.deleteFile).toHaveBeenCalledWith('assets/x.png');
-      expect(prisma.asset.delete).toHaveBeenCalledWith({ where: { id: assetId } });
+      expect(prisma.asset.findFirst).toHaveBeenCalledWith({ where: { id: assetId, projectId, deletedAt: null } });
+      expect(prisma.asset.update).toHaveBeenCalledWith({
+        where: { id: assetId },
+        data: { deletedAt: expect.any(Date) },
+      });
+      expect(storageService.deleteFile).not.toHaveBeenCalled();
+      expect(prisma.asset.delete).not.toHaveBeenCalled();
       expect(result).toEqual({ success: true });
+    });
+  });
+
+  describe('restoreAsset', () => {
+    it('gỡ deletedAt của asset đã soft-delete', async () => {
+      prisma.asset.findFirst.mockResolvedValue({ id: assetId, deletedAt: new Date() });
+      prisma.asset.update.mockResolvedValue({ id: assetId, deletedAt: null });
+
+      const result = await service.restoreAsset(projectId, assetId, designerId);
+
+      expect(prisma.asset.findFirst).toHaveBeenCalledWith({
+        where: { id: assetId, projectId, deletedAt: { not: null } },
+      });
+      expect(prisma.asset.update).toHaveBeenCalledWith({ where: { id: assetId }, data: { deletedAt: null } });
+      expect(result).toEqual({ id: assetId, deletedAt: null });
+    });
+
+    it('throw NotFoundException khi không có asset đã xoá nào để khôi phục', async () => {
+      prisma.asset.findFirst.mockResolvedValue(null);
+
+      await expect(service.restoreAsset(projectId, assetId, designerId)).rejects.toThrow(NotFoundException);
+      expect(prisma.asset.update).not.toHaveBeenCalled();
     });
   });
 

@@ -16,6 +16,7 @@ describe('ProjectService', () => {
       delete: jest.Mock;
     };
     asset: {
+      findMany: jest.Mock;
       deleteMany: jest.Mock;
     };
   };
@@ -35,6 +36,7 @@ describe('ProjectService', () => {
         delete: jest.fn(),
       },
       asset: {
+        findMany: jest.fn().mockResolvedValue([]),
         deleteMany: jest.fn(),
       },
     };
@@ -72,7 +74,7 @@ describe('ProjectService', () => {
   });
 
   describe('findOne', () => {
-    it('trả về project kèm assets khi tìm thấy', async () => {
+    it('trả về project kèm assets (bỏ qua asset đã soft-delete) khi tìm thấy', async () => {
       const project = { id: projectId, designerId, assets: [] };
       prisma.project.findFirst.mockResolvedValue(project);
 
@@ -80,7 +82,7 @@ describe('ProjectService', () => {
 
       expect(prisma.project.findFirst).toHaveBeenCalledWith({
         where: { id: projectId, designerId },
-        include: { assets: true },
+        include: { assets: { where: { deletedAt: null } } },
       });
       expect(result).toEqual(project);
     });
@@ -135,21 +137,19 @@ describe('ProjectService', () => {
   });
 
   describe('delete', () => {
-    it('xoá file storage cho từng asset + trigger image, rồi xoá asset & project trong DB', async () => {
-      const project = {
-        id: projectId,
-        designerId,
-        triggerImage: 'trigger-key',
-        assets: [
-          { id: 'a1', storageKey: 'key-1' },
-          { id: 'a2', storageKey: 'key-2' },
-        ],
-      };
+    it('xoá file storage cho từng asset (kể cả đã soft-delete) + trigger image, rồi xoá asset & project trong DB', async () => {
+      // findOne() chỉ trả asset chưa xoá; delete() phải tự lấy TẤT CẢ asset để dọn storage
+      const project = { id: projectId, designerId, triggerImage: 'trigger-key', assets: [{ id: 'a1', storageKey: 'key-1' }] };
       prisma.project.findFirst.mockResolvedValue(project);
+      prisma.asset.findMany.mockResolvedValue([
+        { id: 'a1', storageKey: 'key-1', deletedAt: null },
+        { id: 'a2', storageKey: 'key-2', deletedAt: new Date() },
+      ]);
       prisma.project.delete.mockResolvedValue(project);
 
       await service.delete(projectId, designerId);
 
+      expect(prisma.asset.findMany).toHaveBeenCalledWith({ where: { projectId } });
       expect(storageService.deleteFile).toHaveBeenCalledWith('key-1');
       expect(storageService.deleteFile).toHaveBeenCalledWith('key-2');
       expect(storageService.deleteFile).toHaveBeenCalledWith('trigger-key');
@@ -165,6 +165,7 @@ describe('ProjectService', () => {
         assets: [{ id: 'a1', storageKey: 'key-1' }],
       };
       prisma.project.findFirst.mockResolvedValue(project);
+      prisma.asset.findMany.mockResolvedValue(project.assets);
       storageService.deleteFile.mockRejectedValue(new Error('storage down'));
       prisma.project.delete.mockResolvedValue(project);
 
