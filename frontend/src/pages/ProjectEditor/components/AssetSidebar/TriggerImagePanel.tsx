@@ -1,4 +1,5 @@
 import { useRef } from 'react';
+import { AnchorFrame } from '../../../../components/Brand';
 import { ImageIcon, Trash2, Upload } from 'lucide-react';
 
 interface TriggerImagePanelProps {
@@ -19,7 +20,7 @@ export function TriggerImagePanel({ triggerImageUrl, onUpload, onDelete }: Trigg
     return (
         <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+                <span className="text-sm font-medium text-gray-300 flex items-center gap-1.5">
                     <ImageIcon size={12} />
                     Trigger Image
                 </span>
@@ -35,28 +36,27 @@ export function TriggerImagePanel({ triggerImageUrl, onUpload, onDelete }: Trigg
             </div>
 
             {triggerImageUrl ? (
-                <div
-                    onClick={() => inputRef.current?.click()}
-                    className="relative h-36 rounded-xl overflow-hidden border border-white/8 cursor-pointer group"
-                >
-                    <img
-                        src={triggerImageUrl}
-                        alt="Trigger"
-                        className="w-full h-full object-cover group-hover:opacity-70 transition-opacity duration-200"
-                    />
-                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                        <span className="text-xs font-semibold text-white bg-black/60 px-3 py-1.5 rounded-lg flex items-center gap-1.5">
-                            <Upload size={12} /> Replace
-                        </span>
+                <AnchorFrame active className="h-36 rounded-xl overflow-hidden border border-white/8 cursor-pointer group">
+                    <div onClick={() => inputRef.current?.click()} className="absolute inset-0">
+                        <img
+                            src={triggerImageUrl}
+                            alt="Trigger"
+                            className="w-full h-full object-cover group-hover:opacity-70 transition-opacity duration-200"
+                        />
+                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                            <span className="text-xs font-semibold text-white bg-black/60 px-3 py-1.5 rounded-lg flex items-center gap-1.5">
+                                <Upload size={12} /> Replace
+                            </span>
+                        </div>
                     </div>
-                </div>
+                </AnchorFrame>
             ) : (
                 <div
                     onClick={() => inputRef.current?.click()}
-                    className="h-36 rounded-xl border border-dashed border-white/15 hover:border-blue-500/50 bg-white/2 hover:bg-blue-500/5 flex flex-col items-center justify-center gap-2 cursor-pointer transition-all duration-200 group"
+                    className="h-36 rounded-xl border border-dashed border-white/15 hover:border-accent/60 bg-white/2 hover:bg-white/4 flex flex-col items-center justify-center gap-2 cursor-pointer transition-all duration-200 group"
                 >
-                    <div className="p-2 rounded-lg bg-white/5 group-hover:bg-blue-500/10 transition-colors">
-                        <Upload size={18} className="text-gray-500 group-hover:text-blue-400 transition-colors" />
+                    <div className="p-2 rounded-lg bg-white/5 group-hover:bg-white/10 transition-colors">
+                        <Upload size={18} className="text-gray-500 group-hover:text-accent-ink transition-colors" />
                     </div>
                     <span className="text-xs text-gray-500 group-hover:text-gray-400 transition-colors">
                         Upload trigger image

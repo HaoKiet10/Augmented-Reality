@@ -3,6 +3,7 @@ import type { Asset } from '../../types';
 import { ArScene } from './ArScene';
 import { ArStatusBadge } from './ArStatusBadge';
 import { ArSceneErrorBoundary } from './ArSceneErrorBoundary';
+import { Spinner } from '../../../../components/ui';
 
 interface ArViewportProps {
     aframeLoaded: boolean;
@@ -20,16 +21,16 @@ export function ArViewport({ aframeLoaded, triggerImageUrl, assets, activeAssetI
     const activeAsset = assets.find((a) => a.id === activeAssetId) ?? null;
 
     return (
-        <main className="flex-1 bg-[#15171e] relative overflow-hidden flex flex-col justify-center items-center">
+        <main className="bp-grid flex-1 bg-raised relative overflow-hidden flex flex-col justify-center items-center">
             {!aframeLoaded ? (
-                <div className="flex flex-col items-center gap-3">
-                    <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                <div className="relative flex flex-col items-center gap-3">
+                    <Spinner />
                     <p className="text-gray-400 text-sm">Rendering A-Frame Graphics Engine...</p>
                 </div>
             ) : assets.length === 0 ? (
-                <div className="max-w-md text-center flex flex-col items-center p-8">
+                <div className="relative max-w-md text-center flex flex-col items-center p-8">
                     <div className="p-4 bg-white/2 border border-white/5 rounded-full mb-4 animate-pulse">
-                        <Box size={36} className="text-blue-400" />
+                        <Box size={36} className="text-gray-500" />
                     </div>
                     <h3 className="text-lg font-bold text-gray-200">AR Preview Sandbox</h3>
                     <p className="text-sm text-gray-400 mt-2 leading-relaxed">

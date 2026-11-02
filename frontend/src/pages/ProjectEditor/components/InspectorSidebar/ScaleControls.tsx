@@ -35,7 +35,7 @@ export function ScaleControls({
                     id="uniform-scale-toggle"
                     checked={uniformScale}
                     onChange={(e) => setUniformScale(e.target.checked)}
-                    className="rounded border-white/10 accent-blue-500 bg-white/2"
+                    className="rounded border-white/10 accent-accent bg-white/2"
                 />
                 <label htmlFor="uniform-scale-toggle" className="text-[10px] text-gray-400 cursor-pointer select-none">
                     Link Axes (Uniform Scale)

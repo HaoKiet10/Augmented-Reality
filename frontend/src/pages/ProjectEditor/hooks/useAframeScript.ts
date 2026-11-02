@@ -852,6 +852,39 @@ export function useAframeScript(): boolean {
                         }
                     });
                 }
+
+                // Lưới blueprint nằm TRÊN mặt phẳng trigger (mặt XY, z = 0) — xem quy ước không gian
+                // trong constants.ts: ô nhỏ = 0.1 đơn vị (10% bề rộng trigger), ô lớn = 1 đơn vị.
+                // THREE.GridHelper vẽ trên mặt XZ nên phải xoay 90° quanh trục X.
+                if (!AFRAME.components['blueprint-grid']) {
+                    AFRAME.registerComponent('blueprint-grid', {
+                        schema: {
+                            color: { type: 'color', default: '#3ee0d0' },
+                            size: { type: 'number', default: 20 },
+                        },
+                        init: function (this: { el: any; data: any }) {
+                            const { color, size } = this.data;
+                            const makeGrid = (divisions: number, opacity: number) => {
+                                const grid = new THREE.GridHelper(size, divisions, color, color);
+                                grid.rotation.x = Math.PI / 2;
+                                grid.material.transparent = true;
+                                grid.material.opacity = opacity;
+                                grid.material.depthWrite = false;
+                                return grid;
+                            };
+                            const group = new THREE.Group();
+                            group.add(makeGrid(size * 10, 0.08), makeGrid(size, 0.22));
+                            this.el.setObject3D('mesh', group);
+                        },
+                        remove: function (this: { el: any }) {
+                            this.el.getObject3D('mesh').children.forEach((grid: any) => {
+                                grid.geometry.dispose();
+                                grid.material.dispose();
+                            });
+                            this.el.removeObject3D('mesh');
+                        }
+                    });
+                }
             }
             if (mounted) setLoaded(true);
         });

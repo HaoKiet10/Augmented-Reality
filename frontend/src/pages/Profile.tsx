@@ -4,6 +4,7 @@ import { ArrowLeft, Save, KeyRound } from 'lucide-react';
 import { z } from 'zod';
 import { useAuth, type User } from '../context/AuthContext';
 import { API_URL } from '../config';
+import { Spinner } from '../components/ui';
 
 const passwordSchema = z
   .object({
@@ -18,15 +19,12 @@ const passwordSchema = z
 
 type Notice = { type: 'success' | 'error'; text: string } | null;
 
-const inputClass =
-  'w-full px-4 py-3 bg-[#15171e] border border-white/8 text-white rounded-lg placeholder-gray-500 focus:outline-none focus:border-blue-500/80 focus:ring-1 focus:ring-blue-500/80 transition-all duration-200';
-
 const NoticeBox: React.FC<{ notice: Notice }> = ({ notice }) =>
   notice ? (
     <div
       className={`p-3 mb-4 text-sm rounded-lg border ${
         notice.type === 'success'
-          ? 'bg-green-500/10 border-green-500/20 text-green-400'
+          ? 'bg-positive-bg border-positive/30 text-positive'
           : 'bg-red-500/10 border-red-500/20 text-red-400'
       }`}
     >
@@ -119,15 +117,10 @@ export const Profile: React.FC = () => {
     }
   };
 
-  const labelClass = 'block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2';
-  const primaryBtn =
-    'flex items-center justify-center gap-2 py-2.5 px-5 bg-linear-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-semibold rounded-lg shadow-lg active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none transition-all duration-200';
+  const labelClass = 'block text-sm font-medium text-gray-300 mb-2';
 
   return (
-    <div className="relative min-h-screen bg-[#0d0e12] text-white font-sans overflow-hidden">
-      <div className="absolute top-0 right-0 w-125 h-125 bg-blue-500/10 rounded-full filter blur-[120px] pointer-events-none"></div>
-      <div className="absolute bottom-0 left-0 w-125 h-125 bg-purple-500/10 rounded-full filter blur-[120px] pointer-events-none"></div>
-
+    <div className="bp-grid relative min-h-screen bg-ground text-white overflow-hidden">
       <main className="relative z-10 max-w-2xl mx-auto px-6 py-12">
         <Link to="/dashboard" className="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors mb-8">
           <ArrowLeft size={16} />
@@ -142,27 +135,27 @@ export const Profile: React.FC = () => {
 
         {!profile && !loadError && (
           <div className="flex justify-center py-12">
-            <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+            <Spinner />
           </div>
         )}
 
         {profile && (
           <div className="space-y-8">
             {/* Thông tin cơ bản */}
-            <section className="p-6 bg-white/3 backdrop-blur-xl border border-white/8 rounded-2xl">
+            <section className="p-6 bg-surface border border-white/8 rounded-2xl">
               <h2 className="text-lg font-bold mb-4">Account</h2>
               <NoticeBox notice={nameNotice} />
               <form onSubmit={saveName} className="space-y-4">
                 <div>
                   <label className={labelClass}>Email</label>
-                  <input value={profile.email} disabled className={`${inputClass} opacity-60 cursor-not-allowed`} />
+                  <input value={profile.email} disabled className="field opacity-60 cursor-not-allowed" />
                   <p className="mt-1 text-xs text-gray-500">Email can't be changed yet.</p>
                 </div>
                 <div>
                   <label className={labelClass}>Name</label>
-                  <input value={name} onChange={(e) => setName(e.target.value)} maxLength={100} className={inputClass} placeholder="Your name" />
+                  <input value={name} onChange={(e) => setName(e.target.value)} maxLength={100} className="field" placeholder="Your name" />
                 </div>
-                <button type="submit" disabled={savingName} className={primaryBtn}>
+                <button type="submit" disabled={savingName} className="btn-primary py-2.5 px-5">
                   <Save size={16} />
                   <span>{savingName ? 'Saving…' : 'Save changes'}</span>
                 </button>
@@ -170,7 +163,7 @@ export const Profile: React.FC = () => {
             </section>
 
             {/* Đổi mật khẩu — tài khoản chỉ có Google không có mật khẩu để đổi */}
-            <section className="p-6 bg-white/3 backdrop-blur-xl border border-white/8 rounded-2xl">
+            <section className="p-6 bg-surface border border-white/8 rounded-2xl">
               <h2 className="text-lg font-bold mb-4">Password</h2>
               {profile.hasPassword ? (
                 <>
@@ -178,17 +171,17 @@ export const Profile: React.FC = () => {
                   <form onSubmit={savePassword} className="space-y-4">
                     <div>
                       <label className={labelClass}>Current password</label>
-                      <input type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} className={inputClass} autoComplete="current-password" />
+                      <input type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} className="field" autoComplete="current-password" />
                     </div>
                     <div>
                       <label className={labelClass}>New password</label>
-                      <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className={inputClass} autoComplete="new-password" />
+                      <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="field" autoComplete="new-password" />
                     </div>
                     <div>
                       <label className={labelClass}>Confirm new password</label>
-                      <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className={inputClass} autoComplete="new-password" />
+                      <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="field" autoComplete="new-password" />
                     </div>
-                    <button type="submit" disabled={savingPw} className={primaryBtn}>
+                    <button type="submit" disabled={savingPw} className="btn-primary py-2.5 px-5">
                       <KeyRound size={16} />
                       <span>{savingPw ? 'Updating…' : 'Change password'}</span>
                     </button>

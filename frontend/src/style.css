@@ -1,14 +1,87 @@
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
 @import "tailwindcss";
 
+/* Theme dùng chung cho cả app: 1 font, 1 màu nhấn (accent cyan) cho nút chính, vùng chọn, link
+ * và "neo AR" (góc khung quanh trigger image). Mọi màu đều đi qua token --t-* bên dưới —
+ * kể cả thang xám gray-* của Tailwind. */
+@theme {
+  --font-sans: 'Outfit', ui-sans-serif, system-ui, sans-serif;
+
+  --color-ground: var(--t-ground);    /* nền trang */
+  --color-surface: var(--t-surface);  /* sidebar, card, header */
+  --color-raised: var(--t-raised);    /* ô input, khung xem 3D */
+
+  --color-accent: var(--t-accent);
+  --color-accent-hover: var(--t-accent-hover);
+  --color-accent-ink: var(--t-accent-ink);  /* chữ/icon màu nhấn trên nền tối */
+  --color-on-accent: var(--t-on-accent);    /* chữ trên nền accent */
+
+  --color-positive: var(--t-positive);
+  --color-positive-bg: var(--t-positive-bg);
+
+  /* "white" của Tailwind (text-white, bg-white/5…) là trắng dịu theo theme, không phải #fff
+   * thuần — đỡ chói trên nền tối. */
+  --color-white: var(--t-white);
+
+  --color-gray-200: var(--t-n-200);
+  --color-gray-300: var(--t-n-300);
+  --color-gray-400: var(--t-n-400);
+  --color-gray-500: var(--t-n-500);
+  --color-gray-600: var(--t-n-600);
+}
+
+/* Spatial blueprint: nền mực xanh lấy từ khung xem 3D, cyan cho neo AR và vùng chọn. */
+:root {
+  --t-ground: #0b1220;
+  --t-surface: #101a2b;
+  --t-raised: #16223a;
+  --t-accent: #3ee0d0;
+  --t-accent-hover: #6cebdf;
+  --t-accent-ink: #5ff0e1;
+  --t-on-accent: #04201d;
+  --t-positive: #a3e635;
+  --t-positive-bg: #1c2a12;
+  --t-white: #dce4f0;
+  --t-n-200: #c9d3e4;
+  --t-n-300: #b9c6de;
+  --t-n-400: #93a3bf;
+  --t-n-500: #74849f;
+  --t-n-600: #4b5a76;
+  --t-grid: rgb(62 224 208 / 0.07);
+  --t-grid-3d: #3ee0d0;  /* màu lưới trong khung xem 3D (độ mờ đặt ở blueprint-grid) */
+}
+
 body {
-  font-family: 'Outfit', sans-serif;
   margin: 0;
-  background-color: #0d0e12;
+  background-color: var(--color-ground);
 }
 
 #app {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+}
+
+/* Kiểu dùng chung cho nút chính và ô nhập. Nằm ở layer components nên class utility ở nơi
+ * dùng (padding, bo góc, w-full…) vẫn ghi đè được. Viền đỏ của ô lỗi lấy từ aria-invalid. */
+@layer components {
+  .btn-primary {
+    @apply flex items-center justify-center gap-2 bg-accent text-on-accent font-semibold rounded-lg transition hover:bg-accent-hover active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none;
+  }
+
+  .field {
+    @apply w-full px-4 py-3 bg-raised border border-white/8 text-white rounded-lg placeholder-gray-500 transition-colors focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent aria-invalid:border-red-500/50;
+  }
+}
+
+/* Lưới blueprint 24px phía sau canvas: vẽ bằng mask SVG (không dùng gradient) để màu lưới
+ * vẫn lấy từ token theme. Phần tử dùng class này cần position khác static. */
+.bp-grid::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-color: var(--t-grid);
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Cpath d='M24 .5H.5V24' fill='none' stroke='%23000'/%3E%3C/svg%3E");
+  mask-size: 24px 24px;
 }

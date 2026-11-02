@@ -43,7 +43,7 @@ export function AssetSidebar({
 }: AssetSidebarProps) {
     if (collapsed) {
         return (
-            <aside className="w-14 border-r border-white/8 bg-[#111218] flex flex-col items-center py-4 gap-4 shrink-0 transition-all duration-200">
+            <aside className="w-14 border-r border-white/8 bg-surface flex flex-col items-center py-4 gap-4 shrink-0 transition-all duration-200">
                 <button
                     onClick={onToggleCollapsed}
                     title="Expand assets panel"
@@ -64,10 +64,10 @@ export function AssetSidebar({
     }
 
     return (
-        <aside className="w-80 border-r border-white/8 bg-[#111218] flex flex-col justify-between overflow-y-auto shrink-0 transition-all duration-200">
+        <aside className="w-80 border-r border-white/8 bg-surface flex flex-col justify-between overflow-y-auto shrink-0 transition-all duration-200">
             <div className="p-5 flex-1 flex flex-col gap-6">
                 <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-bold tracking-wide text-gray-300">ASSETS</h3>
+                    <h3 className="text-sm font-semibold text-gray-200">Assets</h3>
                     <button
                         onClick={onToggleCollapsed}
                         title="Collapse assets panel"

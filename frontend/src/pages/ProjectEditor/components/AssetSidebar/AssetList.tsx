@@ -12,8 +12,8 @@ interface AssetListProps {
 export function AssetList({ assets, activeAsset, onSelectAsset, onDeleteAsset }: AssetListProps) {
     return (
         <div className="flex-1 flex flex-col">
-            <h3 className="text-sm font-bold mb-3 tracking-wide text-gray-300 flex items-center justify-between">
-                <span>ASSETS BANK</span>
+            <h3 className="text-sm font-semibold mb-3 text-gray-200 flex items-center justify-between">
+                <span>Asset bank</span>
                 <span className="text-xs font-normal text-gray-500">({assets.length} items)</span>
             </h3>
 

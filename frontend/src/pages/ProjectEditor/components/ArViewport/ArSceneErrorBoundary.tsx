@@ -61,7 +61,7 @@ export class ArSceneErrorBoundary extends Component<ArSceneErrorBoundaryProps, A
                         )}
                         <button
                             onClick={this.handleRetry}
-                            className="mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-sm font-semibold transition-colors"
+                            className="btn-primary mt-4 px-4 py-2 text-sm"
                         >
                             Thử lại
                         </button>

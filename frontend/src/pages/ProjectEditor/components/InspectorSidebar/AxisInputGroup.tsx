@@ -62,7 +62,7 @@ export function AxisSlider({
                 step={step}
                 value={value}
                 onChange={(e) => onChange(parseFloat(e.target.value))}
-                className="w-full accent-blue-500 bg-white/10 rounded-lg appearance-none h-1"
+                className="w-full accent-accent bg-white/10 rounded-lg appearance-none h-1"
             />
         </div>
     );
