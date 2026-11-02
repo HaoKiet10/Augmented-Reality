@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { API_URL } from '../config';
 import { RATE_LIMIT_MESSAGE } from '../context/AuthContext';
 import { AuthCard } from '../components/AuthCard';
+import { Spinner } from '../components/ui';
 
 const resetSchema = z
   .object({
@@ -31,7 +32,7 @@ export const ResetPassword: React.FC = () => {
   if (!token) {
     return (
       <AuthCard title="Invalid link" subtitle="This reset link is missing its token.">
-        <Link to="/forgot-password" className="block text-center text-blue-400 hover:text-blue-300 font-medium transition-colors">
+        <Link to="/forgot-password" className="block text-center text-accent-ink hover:text-white font-medium transition-colors">
           Request a new link
         </Link>
       </AuthCard>
@@ -81,17 +82,12 @@ export const ResetPassword: React.FC = () => {
   if (done) {
     return (
       <AuthCard title="Password updated" subtitle="You've been signed out everywhere. Redirecting to Sign In…">
-        <Link to="/login" className="block text-center text-blue-400 hover:text-blue-300 font-medium transition-colors">
+        <Link to="/login" className="block text-center text-accent-ink hover:text-white font-medium transition-colors">
           Go to Sign In now
         </Link>
       </AuthCard>
     );
   }
-
-  const inputClass = (hasError?: string) =>
-    `w-full pl-10 pr-4 py-3 bg-[#15171e] border ${
-      hasError ? 'border-red-500/50' : 'border-white/8'
-    } text-white rounded-lg placeholder-gray-500 focus:outline-none focus:border-blue-500/80 focus:ring-1 focus:ring-blue-500/80 transition-all duration-200`;
 
   return (
     <AuthCard title="Set a new password" subtitle="Choose a password you haven't used before">
@@ -106,23 +102,23 @@ export const ResetPassword: React.FC = () => {
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <div>
-          <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">New Password</label>
+          <label className="block text-sm font-medium text-gray-300 mb-2">New Password</label>
           <div className="relative">
             <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500">
               <Lock size={18} />
             </span>
-            <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className={inputClass(validationError.newPassword)} placeholder="••••••••" />
+            <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} aria-invalid={!!validationError.newPassword} className="field pl-10" placeholder="••••••••" />
           </div>
           {validationError.newPassword && <p className="mt-1 text-xs text-red-400">{validationError.newPassword}</p>}
         </div>
 
         <div>
-          <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Confirm Password</label>
+          <label className="block text-sm font-medium text-gray-300 mb-2">Confirm Password</label>
           <div className="relative">
             <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500">
               <Lock size={18} />
             </span>
-            <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className={inputClass(validationError.confirmPassword)} placeholder="••••••••" />
+            <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} aria-invalid={!!validationError.confirmPassword} className="field pl-10" placeholder="••••••••" />
           </div>
           {validationError.confirmPassword && <p className="mt-1 text-xs text-red-400">{validationError.confirmPassword}</p>}
         </div>
@@ -130,10 +126,10 @@ export const ResetPassword: React.FC = () => {
         <button
           type="submit"
           disabled={isSubmitting}
-          className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-linear-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-semibold rounded-lg shadow-lg hover:shadow-blue-500/20 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none transition-all duration-200"
+          className="btn-primary w-full py-3 px-4"
         >
           {isSubmitting ? (
-            <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
+            <Spinner size="sm" tone="on-accent" />
           ) : (
             <>
               <KeyRound size={18} />

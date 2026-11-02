@@ -1,5 +1,6 @@
 import { AlertCircle, ArrowLeft, Save, Sparkles, Upload, Undo2, Loader2 } from 'lucide-react';
 import type { ProjectStatus, SaveStatus } from '../types';
+import { StatusPill } from '../../../components/ui';
 
 interface EditorHeaderProps {
     name: string | undefined;
@@ -35,7 +36,7 @@ export function EditorHeader({
     publishError,
 }: EditorHeaderProps) {
     return (
-        <header className="relative z-10 border-b border-white/8 bg-white/2 backdrop-blur-md px-6 py-4 flex items-center justify-between">
+        <header className="relative z-10 border-b border-white/8 bg-surface px-6 py-4 flex items-center justify-between">
             <div className="flex items-center gap-4">
                 <button
                     onClick={onBack}
@@ -63,14 +64,7 @@ export function EditorHeader({
                             </h1>
                         )}
 
-                        <span
-                            className={`px-2 py-0.5 text-xs font-semibold rounded-full capitalize border ${status === 'published'
-                                    ? 'bg-green-500/20 text-green-300 border-green-500/30'
-                                    : 'bg-blue-500/20 text-blue-300 border-blue-500/30'
-                                }`}
-                        >
-                            {status}
-                        </span>
+                        {status && <StatusPill status={status} />}
                     </div>
 
                     <p className="text-xs text-gray-400">Campaign Editor Workspace</p>
@@ -84,7 +78,7 @@ export function EditorHeader({
 
             <div className="flex items-center gap-3">
                 {saveStatus === 'saved' && (
-                    <span className="text-xs text-green-400 flex items-center gap-1">
+                    <span className="text-xs text-positive flex items-center gap-1">
                         <Sparkles size={14} /> Coordinates saved
                     </span>
                 )}
@@ -96,7 +90,7 @@ export function EditorHeader({
                 <button
                     onClick={onSaveConfig}
                     disabled={saveStatus === 'saving'}
-                    className="flex items-center gap-2 px-5 py-2.5 bg-linear-to-r from-blue-500 to-purple-600 rounded-lg hover:from-blue-600 hover:to-purple-700 transition-all font-semibold shadow-md shadow-blue-500/20 text-sm active:scale-[0.98] disabled:opacity-50"
+                    className="flex items-center gap-2 px-5 py-2.5 bg-white/5 border border-white/10 rounded-lg hover:bg-white/10 transition-all font-semibold text-sm active:scale-[0.98] disabled:opacity-50"
                 >
                     <Save size={16} />
                     <span>{saveStatus === 'saving' ? 'Saving...' : 'Done'}</span>
@@ -115,7 +109,7 @@ export function EditorHeader({
                     <button
                         onClick={onPublish}
                         disabled={publishLoading}
-                        className="flex items-center gap-2 px-5 py-2.5 bg-linear-to-r from-green-500 to-emerald-600 rounded-lg hover:from-green-600 hover:to-emerald-700 transition-all font-semibold shadow-md shadow-green-500/20 text-sm active:scale-[0.98] disabled:opacity-50"
+                        className="btn-primary px-5 py-2.5 text-sm"
                     >
                         {publishLoading ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
                         <span>{publishLoading ? 'Publishing...' : 'Publish'}</span>

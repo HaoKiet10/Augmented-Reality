@@ -3,6 +3,7 @@ import { Entity } from 'aframe-react';
 import type { Asset } from '../../types';
 import { isImageAsset, isVideoAsset } from '../../utils/assetType';
 import { DEFAULT_SPATIAL_CONFIG, MARKER_PLANE_WIDTH } from '../../constants';
+import { themeColor } from '../../../../theme';
 
 /**
  * Theo dõi trạng thái "đã có frame thật" của từng thẻ <video> trong <a-assets>.
@@ -401,7 +402,9 @@ export function ArScene({ triggerImageUrl, assets, activeAssetId, onSelectAsset,
                     material="color: #334155; shader: flat; side: double; transparent: true; opacity: 0.5"
                 />
             )}
-            <Entity primitive="a-sky" color="#0d0e12" />
+            <Entity primitive="a-sky" color={themeColor('raised')} />
+            {/* Lùi sau mặt phẳng trigger một chút để ảnh trigger luôn vẽ đè lên lưới. */}
+            <Entity blueprint-grid={`color: ${themeColor('grid-3d')}`} position="0 0 -0.002" />
 
             {/* Lights */}
             <Entity light="type: ambient; color: #BBB" />

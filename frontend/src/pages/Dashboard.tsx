@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LogOut, LayoutDashboard, User as UserIcon, Plus, Folder, Calendar, Trash2, ExternalLink } from 'lucide-react';
+import { LogOut, User as UserIcon, Plus, Folder, Calendar, Trash2, ExternalLink } from 'lucide-react';
 import type { Project } from '../pages/ProjectEditor/types';
 import { API_URL } from '../config';
+import { AnchorFrame, BrandWordmark } from '../components/Brand';
+import { StatusPill } from '../components/ui';
 
 
 export const Dashboard: React.FC = () => {
@@ -120,27 +122,18 @@ export const Dashboard: React.FC = () => {
   );
 
   return (
-    <div className="relative min-h-screen bg-[#0d0e12] overflow-hidden text-white font-sans">
-      {/* Background neon blur */}
-      <div className="absolute top-0 right-0 w-125 h-125 bg-blue-500/10 rounded-full filter blur-[120px] pointer-events-none"></div>
-      <div className="absolute bottom-0 left-0 w-125 h-125 bg-purple-500/10 rounded-full filter blur-[120px] pointer-events-none"></div>
-
+    <div className="bp-grid relative min-h-screen bg-ground overflow-hidden text-white">
       {/* Navigation Header */}
-      <header className="relative z-10 border-b border-white/8 bg-white/1 backdrop-blur-md">
+      <header className="relative z-10 border-b border-white/8 bg-surface">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <LayoutDashboard className="text-blue-400" size={24} />
-            <span className="font-bold text-lg tracking-wider bg-clip-text bg-linear-to-r from-blue-400 to-purple-400">
-              AR DESIGNER
-            </span>
-          </div>
+          <BrandWordmark />
 
           <div className="flex items-center gap-6">
             <Link to="/profile" title="Edit profile" className="flex items-center gap-2 text-sm text-gray-300 hover:text-white transition-colors">
-              <UserIcon size={16} className="text-purple-400" />
+              <UserIcon size={16} className="text-gray-400" />
               <span>{user?.name || user?.email}</span>
               {user?.role && (
-                <span className="px-2 py-0.5 text-xs font-semibold bg-blue-500/20 text-blue-300 border border-blue-500/30 rounded-full">
+                <span className="px-2 py-0.5 text-xs font-semibold bg-white/5 text-gray-300 border border-white/10 rounded-full">
                   {user.role}
                 </span>
               )}
@@ -166,7 +159,7 @@ export const Dashboard: React.FC = () => {
         )}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
           <div>
-            <h1 className="text-4xl font-extrabold tracking-tight bg-clip-text bg-linear-to-r from-white to-gray-400">
+            <h1 className="text-4xl font-extrabold tracking-tight">
               Designer Workspace
             </h1>
             <p className="mt-2 text-gray-400">
@@ -175,7 +168,7 @@ export const Dashboard: React.FC = () => {
           </div>
           <button
             onClick={handleCreateProject}
-            className="flex items-center justify-center gap-2 px-6 py-3 font-semibold text-white bg-linear-to-r from-blue-500 to-purple-600 rounded-xl hover:from-blue-600 hover:to-purple-700 transition-all duration-300 transform hover:scale-[1.03] shadow-lg shadow-blue-500/25 active:scale-[0.98]"
+            className="btn-primary px-6 py-3 rounded-xl"
           >
             <Plus size={20} />
             <span>Create New Project</span>
@@ -185,36 +178,36 @@ export const Dashboard: React.FC = () => {
         {/* Dashboard grid stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
           {/* Card 1 */}
-          <div className="p-6 bg-white/2 backdrop-blur-lg border border-white/6 rounded-xl hover:border-blue-500/30 transition-all duration-300">
+          <div className="p-6 bg-surface border border-white/6 rounded-xl hover:border-white/15 transition-colors">
             <h3 className="text-lg font-bold text-white mb-2">AR Projects</h3>
             <p className="text-gray-400 text-sm mb-4">Manage and configure your campaign's target images and 3D overlays.</p>
-            <div className="text-3xl font-black text-blue-400">{projects.length} Active</div>
+            <div className="text-3xl font-bold text-white">{projects.length} Active</div>
           </div>
 
           {/* Card 2 */}
-          <div className="p-6 bg-white/2 backdrop-blur-lg border border-white/6 rounded-xl hover:border-purple-500/30 transition-all duration-300">
+          <div className="p-6 bg-surface border border-white/6 rounded-xl hover:border-white/15 transition-colors">
             <h3 className="text-lg font-bold text-white mb-2">Asset Bank</h3>
             <p className="text-gray-400 text-sm mb-4">View files uploaded to your Supabase cloud storage (Limit 5MB).</p>
-            <div className="text-3xl font-black text-purple-400">0 Uploads</div>
+            <div className="text-3xl font-bold text-white">0 Uploads</div>
           </div>
 
           {/* Card 3 */}
-          <div className="p-6 bg-white/2 backdrop-blur-lg border border-white/6 rounded-xl hover:border-teal-500/30 transition-all duration-300">
+          <div className="p-6 bg-surface border border-white/6 rounded-xl hover:border-white/15 transition-colors">
             <h3 className="text-lg font-bold text-white mb-2">Analytics</h3>
             <p className="text-gray-400 text-sm mb-4">View end user scan statistics, transform click rates, and shares.</p>
-            <div className="text-3xl font-black text-teal-400">0 Scans</div>
+            <div className="text-3xl font-bold text-white">0 Scans</div>
           </div>
         </div>
 
         {/* User Projects Section */}
         <section className="mt-8">
           <div className="flex items-center gap-3 mb-6">
-            <Folder className="text-purple-400" size={24} />
+            <Folder className="text-gray-400" size={24} />
             <h2 className="text-2xl font-bold tracking-tight">Your AR Projects</h2>
           </div>
 
           {sortedProjects.length === 0 ? (
-            <div className="flex flex-col items-center justify-center p-12 bg-white/1 backdrop-blur-lg border border-white/5 border-dashed rounded-2xl text-center">
+            <div className="flex flex-col items-center justify-center p-12 bg-surface border border-white/10 border-dashed rounded-2xl text-center">
               <Folder size={48} className="text-gray-600 mb-4 animate-pulse" />
               <h3 className="text-lg font-semibold text-gray-300">No projects yet</h3>
               <p className="text-sm text-gray-500 max-w-sm mt-1">
@@ -227,10 +220,10 @@ export const Dashboard: React.FC = () => {
                 <div
                   key={project.id}
                   onClick={() => handleOpenProject(project.id)}
-                  className="group relative flex flex-col justify-between bg-white/2 backdrop-blur-lg border border-white/6 rounded-2xl hover:border-purple-500/40 hover:bg-white/4 transition-all duration-300 cursor-pointer hover:shadow-xl hover:shadow-purple-500/5 overflow-hidden"
+                  className="group relative flex flex-col justify-between bg-surface border border-white/6 rounded-2xl hover:border-accent/50 transition-all duration-300 cursor-pointer overflow-hidden"
                 >
                   {/* Trigger image thumbnail */}
-                  <div className="relative h-36 bg-white/3 border-b border-white/6 flex items-center justify-center overflow-hidden">
+                  <AnchorFrame active={project.status === 'published'} inset={10} className="h-44 bg-raised border-b border-white/6 flex items-center justify-center overflow-hidden">
                     {project.triggerImageUrl ? (
                       <img
                         src={project.triggerImageUrl}
@@ -248,15 +241,13 @@ export const Dashboard: React.FC = () => {
                       </div>
                     )}
                     {/* Status badge overlay */}
-                    <span className="absolute top-2 left-2 px-2 py-0.5 text-xs font-semibold bg-black/60 backdrop-blur-sm text-purple-300 border border-purple-500/30 rounded-full capitalize">
-                      {project.status}
-                    </span>
-                  </div>
+                    <StatusPill status={project.status} className="absolute top-3.5 left-8" />
+                  </AnchorFrame>
 
                   {/* Card body */}
                   <div className="flex flex-col flex-1 p-5">
                     <div className="flex items-start justify-between mb-2">
-                      <h3 className="text-base font-bold text-white group-hover:text-purple-300 transition-colors duration-200 leading-snug">
+                      <h3 className="text-base font-bold text-white group-hover:text-accent-ink transition-colors duration-200 leading-snug">
                         {project.name}
                       </h3>
                       <button
@@ -271,7 +262,7 @@ export const Dashboard: React.FC = () => {
 
                     <div className="mt-auto flex items-center justify-between pt-4 border-t border-white/5 text-xs text-gray-400">
                       <div className="flex items-center gap-1.5">
-                        <Calendar size={13} className="text-blue-400" />
+                        <Calendar size={13} className="text-gray-500" />
                         <span>
                           {new Date(project.lastOpenedAt).toLocaleDateString(undefined, {
                             month: 'short', day: 'numeric',
@@ -279,7 +270,7 @@ export const Dashboard: React.FC = () => {
                           })}
                         </span>
                       </div>
-                      <div className="flex items-center gap-1 text-blue-400 group-hover:translate-x-0.5 transition-transform duration-200">
+                      <div className="flex items-center gap-1 text-accent-ink group-hover:translate-x-0.5 transition-transform duration-200">
                         <span className="font-semibold">Open</span>
                         <ExternalLink size={12} />
                       </div>

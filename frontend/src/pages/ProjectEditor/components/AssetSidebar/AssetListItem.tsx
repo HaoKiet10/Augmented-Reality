@@ -12,12 +12,12 @@ interface AssetListItemProps {
 
 function getAssetIcon(fileType: string, filename?: string) {
     if (isVideoAsset(fileType, filename)) {
-        return <FileVideo className="text-teal-400" size={18} />;
+        return <FileVideo className="text-gray-400" size={18} />;
     }
     if (isImageAsset(fileType, filename)) {
-        return <Image className="text-emerald-400" size={18} />;
+        return <Image className="text-gray-400" size={18} />;
     }
-    return <Box className="text-blue-400" size={18} />;
+    return <Box className="text-gray-400" size={18} />;
 }
 
 export function AssetListItem({ asset, isSelected, onSelect, onDelete }: AssetListItemProps) {
@@ -25,12 +25,12 @@ export function AssetListItem({ asset, isSelected, onSelect, onDelete }: AssetLi
         <div
             onClick={onSelect}
             className={`group p-3 border rounded-xl flex items-center justify-between cursor-pointer transition-all duration-200 ${isSelected
-                ? 'bg-blue-500/10 border-blue-500/40 hover:bg-blue-500/15'
+                ? 'bg-accent/10 border-accent/60 hover:bg-accent/15'
                 : 'bg-white/2 border-white/6 hover:border-white/15 hover:bg-white/4'
                 }`}
         >
             <div className="flex items-center gap-3 overflow-hidden">
-                <div className={`p-2 rounded-lg ${isSelected ? 'bg-blue-500/20' : 'bg-white/5'}`}>
+                <div className={`p-2 rounded-lg ${isSelected ? 'bg-accent/20' : 'bg-white/5'}`}>
                     {getAssetIcon(asset.fileType, asset.filename)}
                 </div>
                 <div className="overflow-hidden text-left">

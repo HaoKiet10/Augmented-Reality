@@ -2,6 +2,7 @@ import { Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import { FullPageSpinner } from './components/ui';
 
 // Lazy-load theo từng route — quan trọng nhất là ProjectEditor: nó kéo theo cả
 // AssetSidebar/InspectorSidebar/ArScene và hook useAframeScript (bản thân hook không nặng,
@@ -20,21 +21,11 @@ const ProjectEditor = lazy(() =>
   import('./pages/ProjectEditor/ProjectEditor').then((m) => ({ default: m.ProjectEditor }))
 );
 
-/** Fallback tối giản trong lúc chunk của route đang tải — chỉ chớp trong chốc lát trên
- * mạng bình thường, không cần UI cầu kỳ. */
-function RouteFallback() {
-  return (
-    <div className="min-h-screen bg-[#0d0e12] flex items-center justify-center">
-      <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-    </div>
-  );
-}
-
 function App() {
   return (
     <AuthProvider>
       <Router>
-        <Suspense fallback={<RouteFallback />}>
+        <Suspense fallback={<FullPageSpinner />}>
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />

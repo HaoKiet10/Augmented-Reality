@@ -20,6 +20,7 @@ import { ArViewport } from './components/ArViewport/ArViewport';
 import { InspectorSidebar } from './components/InspectorSidebar/InspectorSidebar';
 
 import { DEFAULT_SPATIAL_CONFIG } from './constants';
+import { FullPageSpinner } from '../../components/ui';
 import './aframe.d.ts';
 
 export const ProjectEditor: React.FC = () => {
@@ -152,23 +153,14 @@ export const ProjectEditor: React.FC = () => {
     });
 
     if (loading) {
-        return (
-            <div className="min-h-screen bg-[#0d0e12] flex items-center justify-center text-white">
-                <div className="flex flex-col items-center gap-4">
-                    <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                    <p className="text-gray-400 font-medium">Loading project workspace...</p>
-                </div>
-            </div>
-        );
+        return <FullPageSpinner label="Loading project workspace..." />;
     }
 
     return (
         <div
-            className="relative h-screen bg-[#0d0e12] flex flex-col text-white font-sans overflow-hidden"
+            className="relative h-screen bg-ground flex flex-col text-white overflow-hidden"
             onContextMenu={(e) => e.preventDefault()}
         >
-            <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-500/5 rounded-full filter blur-[120px] pointer-events-none"></div>
-
             <EditorHeader
                 name={name}
                 setName={setName}

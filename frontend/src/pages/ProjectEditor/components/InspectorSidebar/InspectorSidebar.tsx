@@ -31,7 +31,7 @@ export function InspectorSidebar({
 }: InspectorSidebarProps) {
     if (collapsed) {
         return (
-            <aside className="w-14 border-l border-white/8 bg-[#111218] flex flex-col items-center py-4 gap-4 shrink-0 transition-all duration-200">
+            <aside className="w-14 border-l border-white/8 bg-surface flex flex-col items-center py-4 gap-4 shrink-0 transition-all duration-200">
                 <button
                     onClick={onToggleCollapsed}
                     title="Expand properties inspector"
@@ -47,13 +47,13 @@ export function InspectorSidebar({
     }
 
     return (
-        <aside className="w-80 border-l border-white/8 bg-[#111218] p-5 flex flex-col justify-between overflow-y-auto shrink-0 transition-all duration-200">
+        <aside className="w-80 border-l border-white/8 bg-surface p-5 flex flex-col justify-between overflow-y-auto shrink-0 transition-all duration-200">
             {/* onFocus ở đây bắt luôn mọi input số bên trong (PositionControls/RotationControls/
                 ScaleControls) nhờ React delegate sự kiện focus qua synthetic event system — chốt
                 đúng 1 snapshot undo ngay khi user bắt đầu sửa 1 ô, không cần sửa từng input riêng. */}
             <div className="flex flex-col gap-6" onFocus={onBeforeChange}>
                 <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-bold tracking-wide text-gray-300">PROPERTIES INSPECTOR</h3>
+                    <h3 className="text-sm font-semibold text-gray-200">Properties</h3>
                     <button
                         onClick={onToggleCollapsed}
                         title="Collapse properties inspector"

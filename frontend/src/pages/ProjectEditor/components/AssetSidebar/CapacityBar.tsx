@@ -11,14 +11,14 @@ export function CapacityBar({ totalSizeBytes }: CapacityBarProps) {
     const sizePercentage = Math.min((totalSizeMB / MAX_PROJECT_SIZE_MB) * 100, 100);
 
     const barColor =
-        sizePercentage > 90 ? 'bg-red-500' : sizePercentage > 75 ? 'bg-yellow-500' : 'bg-blue-500';
+        sizePercentage > 90 ? 'bg-red-500' : sizePercentage > 75 ? 'bg-yellow-500' : 'bg-accent';
 
     return (
         <div className="p-4 bg-white/2 border border-white/5 rounded-xl">
             <div className="flex justify-between items-center mb-2">
                 <span className="text-xs text-gray-400 font-semibold flex items-center gap-1.5">
-                    <HardDrive size={13} className="text-purple-400" />
-                    PROJECT CAPACITY
+                    <HardDrive size={13} className="text-gray-400" />
+                    Project capacity
                 </span>
                 <span className="text-xs font-bold text-gray-200">
                     {formatMB(totalSizeBytes)} / {MAX_PROJECT_SIZE_MB.toFixed(1)} MB

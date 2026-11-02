@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { AuthCard } from '../components/AuthCard';
+import { Spinner } from '../components/ui';
 
 /** Đích của redirect sau Google OAuth: backend đưa access token qua ?token=...
  * Đọc xong phải xoá token khỏi URL ngay để nó không nằm lại trong lịch sử trình duyệt. */
@@ -35,7 +36,7 @@ export const OAuthCallback: React.FC = () => {
     return (
       <AuthCard title="Sign-in failed">
         <div className="p-3 mb-6 bg-red-500/10 border border-red-500/20 text-red-400 text-sm rounded-lg">{error}</div>
-        <Link to="/login" className="block text-center text-blue-400 hover:text-blue-300 font-medium transition-colors">
+        <Link to="/login" className="block text-center text-accent-ink hover:text-white font-medium transition-colors">
           Back to Sign In
         </Link>
       </AuthCard>
@@ -45,7 +46,7 @@ export const OAuthCallback: React.FC = () => {
   return (
     <AuthCard title="Signing you in…">
       <div className="flex justify-center">
-        <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+        <Spinner />
       </div>
     </AuthCard>
   );

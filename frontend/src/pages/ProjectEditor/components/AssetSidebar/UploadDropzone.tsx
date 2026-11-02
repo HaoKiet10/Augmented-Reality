@@ -10,10 +10,10 @@ interface UploadDropzoneProps {
 export function UploadDropzone({ uploading, fileInputRef, onFileUpload }: UploadDropzoneProps) {
     return (
         <div>
-            <h3 className="text-sm font-bold mb-3 tracking-wide text-gray-300">ADD OVERLAYS</h3>
+            <h3 className="text-sm font-semibold mb-3 text-gray-200">Add overlays</h3>
             <div
                 onClick={() => fileInputRef.current?.click()}
-                className="group border border-dashed border-white/15 hover:border-blue-500/40 bg-white/1 hover:bg-blue-500/5 p-6 rounded-xl flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-300"
+                className="group border border-dashed border-white/15 hover:border-accent/60 bg-white/1 hover:bg-white/4 p-6 rounded-xl flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-300"
             >
                 <input
                     type="file"
@@ -24,7 +24,7 @@ export function UploadDropzone({ uploading, fileInputRef, onFileUpload }: Upload
                 />
                 <UploadCloud
                     size={32}
-                    className="text-gray-500 group-hover:text-blue-400 group-hover:scale-105 transition-all mb-3"
+                    className="text-gray-500 group-hover:text-accent-ink group-hover:scale-105 transition-all mb-3"
                 />
                 <span className="text-xs font-bold text-gray-300 group-hover:text-white mb-1">
                     {uploading ? 'Uploading asset...' : 'Upload 3D Models, Videos, or Images'}
