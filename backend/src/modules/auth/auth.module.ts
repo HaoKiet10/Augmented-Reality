@@ -3,6 +3,7 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { UserModule } from '../user/user.module';
 import { PrismaModule } from '../prisma/prisma.module';
+import { MailModule } from '../mail/mail.module';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { JwtStrategy } from './strategies/jwt.strategy';
@@ -14,7 +15,7 @@ import { JwtRefreshAuthGuard } from './guards/jwt-refresh-auth.guard';
     controllers: [AuthController],
     providers: [AuthService, JwtStrategy, RefreshTokenStrategy, GoogleStrategy, JwtRefreshAuthGuard],
     exports: [AuthService],
-    imports: [UserModule, PrismaModule, JwtModule.registerAsync({
+    imports: [UserModule, PrismaModule, MailModule, JwtModule.registerAsync({
         useFactory: (config: ConfigService) => ({
             secret: config.getOrThrow<string>('JWT_SECRET'),
             signOptions: {

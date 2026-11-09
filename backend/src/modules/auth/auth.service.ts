@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { createHash, randomBytes, randomUUID } from 'crypto';
 import { UserService } from '../user/user.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { MailService } from '../mail/mail.service';
 import { LoginDto } from './dto/login.dto';
 import { SignupDto } from './dto/signup.dto';
 import { JwtService } from '@nestjs/jwt';
@@ -19,6 +20,7 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private jwtService: JwtService,
     private configService: ConfigService,
+    private readonly mailService: MailService,
   ) { }
 
   private hashToken(token: string): string {
@@ -154,13 +156,14 @@ export class AuthService {
       },
     });
 
-    // TODO: chưa nối provider gửi email (Resend/SendGrid/SES...) — chưa có
-    // biến môi trường nào cho SMTP/API key trong .env.example. Tạm thời log
-    // ra để dev/test local vẫn lấy được link. PHẢI thay bằng gửi email thật
-    // trước khi cho end-user dùng thật, vì hiện tại ai đọc được log server
-    // (Render dashboard) cũng lấy được token đặt lại mật khẩu của bất kỳ ai.
     const resetUrl = `${this.configService.get<string>('FRONTEND_URL') ?? 'http://localhost:5173'}/reset-password?token=${rawToken}`;
-    this.logger.warn(`[DEV ONLY] Password reset link for ${user.email}: ${resetUrl}`);
+
+    // Không await: thời gian phản hồi không được phụ thuộc vào việc có gửi mail
+    // hay không (lộ email tồn tại qua timing), và lỗi gửi mail không được lộ ra
+    // client — chỉ log để dev xử lý.
+    this.mailService.sendPasswordReset(user.email, resetUrl).catch((err) => {
+      this.logger.error(`Failed to send password reset email to user ${user.id}: ${err.message}`);
+    });
 
     return genericResult;
   }

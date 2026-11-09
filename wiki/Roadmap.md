@@ -8,10 +8,9 @@ tags: [planning]
 Những việc còn thiếu, xếp gần đúng theo mức ưu tiên.
 
 ## Nên làm trước khi cho người dùng thật dùng
-1. **Gửi email thật** cho [[Auth-Password-Reset]]: hiện link reset chỉ in ra log backend.
-2. **Tham số `state` chống CSRF** cho [[Auth-Google-OAuth]] và redirect lỗi sớm về frontend.
-3. **CI** (`.github/workflows`) chạy lint + test mỗi PR (hiện chưa có).
-4. Đưa RLS vào migration chính thức, bỏ phụ thuộc `db push` ([[Row-Level-Security]], [[Prisma-Setup]]).
+1. **Tham số `state` chống CSRF** cho [[Auth-Google-OAuth]] và redirect lỗi sớm về frontend.
+2. **CI** (`.github/workflows`) chạy lint + test mỗi PR (hiện chưa có).
+3. Đưa RLS vào migration chính thức, bỏ phụ thuộc `db push` ([[Row-Level-Security]], [[Prisma-Setup]]).
 
 ## Tính năng
 - Thống kê lượt scan (bảng `ScanEvent`, ghi ở [[API-Public-Scan]]).
