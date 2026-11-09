@@ -17,7 +17,7 @@ Những lỗi đã thực sự gặp trong dự án, kèm cách xử lý.
 | `GET /rest/v1/…` bằng anon key trả `[]` | RLS đang bật, đúng thiết kế | Đi qua backend ([[Row-Level-Security]]) |
 | Bảng mới hoặc bảng tạo lại không có RLS | RLS không nằm trong migration | Chạy lại `pnpm db:push` hoặc `rls.sql` |
 | HTTP 429 / "Too many attempts" | Vượt giới hạn 5 lần/phút ở route auth | Đợi một phút ([[Rate-Limiting]]) |
-| Email reset mật khẩu không tới | Chưa nối dịch vụ gửi mail | Lấy link trong log backend (`[DEV ONLY]`), [[Auth-Password-Reset]] |
+| Email reset mật khẩu không tới | Thiếu `SMTP_USER`/`SMTP_PASS` (local: link nằm trong log `[DEV ONLY]`), dùng mật khẩu Gmail thay vì App Password (`Invalid login`), hoặc mail vào Spam | Xem log `Failed to send password reset email`, [[Auth-Password-Reset]] |
 | CORS lỗi, frontend báo không tới được API | `CORS_ORIGIN` không khớp origin (ví dụ `127.0.0.1` khác `localhost`) | Sửa `CORS_ORIGIN` ([[Backend]]) |
 | Mobile kẹt ở "đang chuẩn bị dữ liệu nhận diện", `/public/trigger-db` trả 503 | Server chưa dựng xong database lần đầu, hoặc không tìm thấy `arcoreimg` | Đợi vài giây; nếu log có `Không tìm thấy arcoreimg` thì cài tool / đặt `ARCOREIMG_PATH` ([[Trigger-Database]]) |
 | Mobile không nhận ra trigger image của một project đã publish | Ảnh bị loại khỏi database (tải lỗi, quá ít chi tiết) | Xem log `Bỏ ảnh trigger của project …` hoặc field `skipped`; đổi ảnh nhiều chi tiết, tương phản cao hơn ([[Trigger-Database]]) |

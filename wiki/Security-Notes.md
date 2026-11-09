@@ -18,7 +18,6 @@ Tổng hợp rủi ro đã biết, kèm mức độ và việc cần làm. Việ
 ## Còn mở
 | Rủi ro | Mức độ | Ghi chú |
 |---|---|---|
-| Link reset mật khẩu in ra log | **Cao khi dùng thật** | [[Auth-Password-Reset]] |
 | Thiếu `state` trong Google OAuth | Trung bình | login CSRF, [[Auth-Google-OAuth]] |
 | Access token trên URL sau Google login | Thấp | sống 1 ngày; nằm trong lịch sử trình duyệt |
 | Access token trong `localStorage` | Trung bình | XSS đọc được, [[Frontend-AuthContext]] |

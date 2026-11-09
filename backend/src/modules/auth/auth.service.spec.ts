@@ -5,6 +5,7 @@ import { UserService } from '../user/user.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
+import { MailService } from '../mail/mail.service';
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -16,9 +17,11 @@ describe('AuthService', () => {
       update: jest.Mock;
       updateMany: jest.Mock;
     };
+    passwordResetToken: { create: jest.Mock };
   };
+  let mailService: { sendPasswordReset: jest.Mock };
   let jwtService: { sign: jest.Mock };
-  let configService: { getOrThrow: jest.Mock };
+  let configService: { getOrThrow: jest.Mock; get: jest.Mock };
 
   const fakeUser = { id: 'u1', email: 'a@test.com', role: 'designer', password: 'hashed' };
 
@@ -39,12 +42,15 @@ describe('AuthService', () => {
         update: jest.fn(),
         updateMany: jest.fn(),
       },
+      passwordResetToken: { create: jest.fn().mockResolvedValue({}) },
     };
+    mailService = { sendPasswordReset: jest.fn().mockResolvedValue(undefined) };
     jwtService = {
       sign: jest.fn((payload: any) => `signed-${payload.type}-${payload.sub}`),
     };
     configService = {
       getOrThrow: jest.fn().mockReturnValue('refresh-secret'),
+      get: jest.fn().mockReturnValue('http://app.test'),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -54,6 +60,7 @@ describe('AuthService', () => {
         { provide: PrismaService, useValue: prisma },
         { provide: JwtService, useValue: jwtService },
         { provide: ConfigService, useValue: configService },
+        { provide: MailService, useValue: mailService },
       ],
     }).compile();
 
@@ -225,6 +232,43 @@ describe('AuthService', () => {
     });
   });
 
+  describe('forgotPassword', () => {
+    const genericResult = { message: 'If an account with that email exists, a reset link has been sent.' };
+
+    it('gửi email chứa link reset cho user tồn tại', async () => {
+      userService.findByEmail.mockResolvedValue(fakeUser);
+
+      const result = await service.forgotPassword('a@test.com');
+
+      expect(result).toEqual(genericResult);
+      expect(mailService.sendPasswordReset).toHaveBeenCalledTimes(1);
+      const [to, url] = mailService.sendPasswordReset.mock.calls[0];
+      expect(to).toBe('a@test.com');
+      expect(url).toMatch(/^http:\/\/app\.test\/reset-password\?token=[0-9a-f]{64}$/);
+      // token trong link phải khớp hash đã lưu DB
+      const rawToken = url.split('token=')[1];
+      const { createHash } = await import('crypto');
+      expect(prisma.passwordResetToken.create.mock.calls[0][0].data.tokenHash)
+        .toBe(createHash('sha256').update(rawToken).digest('hex'));
+    });
+
+    it('không gửi email khi email không tồn tại, vẫn trả thông báo chung', async () => {
+      userService.findByEmail.mockResolvedValue(null);
+
+      const result = await service.forgotPassword('nobody@test.com');
+
+      expect(result).toEqual(genericResult);
+      expect(mailService.sendPasswordReset).not.toHaveBeenCalled();
+    });
+
+    it('gửi mail lỗi thì vẫn trả thông báo chung (không lộ gì cho client)', async () => {
+      userService.findByEmail.mockResolvedValue(fakeUser);
+      mailService.sendPasswordReset.mockRejectedValue(new Error('SMTP 500'));
+
+      await expect(service.forgotPassword('a@test.com')).resolves.toEqual(genericResult);
+    });
+  });
+
   // Dùng JwtService THẬT (không mock sign) vì lỗi nằm ở nội dung token: iat chỉ tính theo giây, nên 2 lần
   // ký cùng payload trong cùng 1 giây ra token giống hệt -> trùng tokenHash (@unique) -> 500 lần login thứ 2.
   describe('refresh token duy nhất', () => {
@@ -237,6 +281,7 @@ describe('AuthService', () => {
           { provide: PrismaService, useValue: prisma },
           { provide: JwtService, useValue: new JwtService({ secret: 'access-secret' }) },
           { provide: ConfigService, useValue: configService },
+          { provide: MailService, useValue: mailService },
         ],
       }).compile();
       service = module.get<AuthService>(AuthService);
