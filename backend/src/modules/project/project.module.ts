@@ -7,11 +7,12 @@ import { AssetService } from './asset.service';
 import { PrismaModule } from '../prisma/prisma.module';
 import { StorageService } from './storage.service';
 import { TriggerDbService } from './trigger-db.service';
+import { ScanStatsService } from './scan-stats.service';
 
 @Module({
   imports: [PrismaModule],
   controllers: [ProjectController, AssetController, ScanController, TriggerDbController],
-  providers: [ProjectService, AssetService, StorageService, TriggerDbService],
+  providers: [ProjectService, AssetService, StorageService, TriggerDbService, ScanStatsService],
   exports: [ProjectService, AssetService],
 })
 export class ProjectModule {}

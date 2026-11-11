@@ -6,6 +6,7 @@ import type { Project } from '../pages/ProjectEditor/types';
 import { API_URL } from '../config';
 import { AnchorFrame, BrandWordmark } from '../components/Brand';
 import { StatusPill } from '../components/ui';
+import { DashboardStats, type DashboardStatsData } from '../components/DashboardStats';
 
 
 export const Dashboard: React.FC = () => {
@@ -13,6 +14,8 @@ export const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   const [projects, setProjects] = useState<Project[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [stats, setStats] = useState<DashboardStatsData | null>(null);
+  const [statsLoading, setStatsLoading] = useState(true);
 
   // Fetch all projects from database
   const fetchProjects = async () => {
@@ -30,8 +33,22 @@ export const Dashboard: React.FC = () => {
     }
   };
 
+  // Scan statistics for the stats overview. Failure here is non-fatal: the section shows an empty state.
+  const fetchStats = async () => {
+    if (!token) return;
+    try {
+      const response = await authFetch(`${API_URL}/projects/stats`);
+      if (response.ok) setStats(await response.json());
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setStatsLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchProjects();
+    fetchStats();
   }, [token]);
 
   // Create a new project in the database
@@ -175,29 +192,7 @@ export const Dashboard: React.FC = () => {
           </button>
         </div>
 
-        {/* Dashboard grid stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-          {/* Card 1 */}
-          <div className="p-6 bg-surface border border-white/6 rounded-xl hover:border-white/15 transition-colors">
-            <h3 className="text-lg font-bold text-white mb-2">AR Projects</h3>
-            <p className="text-gray-400 text-sm mb-4">Manage and configure your campaign's target images and 3D overlays.</p>
-            <div className="text-3xl font-bold text-white">{projects.length} Active</div>
-          </div>
-
-          {/* Card 2 */}
-          <div className="p-6 bg-surface border border-white/6 rounded-xl hover:border-white/15 transition-colors">
-            <h3 className="text-lg font-bold text-white mb-2">Asset Bank</h3>
-            <p className="text-gray-400 text-sm mb-4">View files uploaded to your Supabase cloud storage (Limit 5MB).</p>
-            <div className="text-3xl font-bold text-white">0 Uploads</div>
-          </div>
-
-          {/* Card 3 */}
-          <div className="p-6 bg-surface border border-white/6 rounded-xl hover:border-white/15 transition-colors">
-            <h3 className="text-lg font-bold text-white mb-2">Analytics</h3>
-            <p className="text-gray-400 text-sm mb-4">View end user scan statistics, transform click rates, and shares.</p>
-            <div className="text-3xl font-bold text-white">0 Scans</div>
-          </div>
-        </div>
+        <DashboardStats projects={projects} stats={stats} loading={statsLoading} />
 
         {/* User Projects Section */}
         <section className="mt-8">

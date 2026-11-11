@@ -5,6 +5,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { ALLOWED_TRIGGER_IMAGE_TYPES } from './asset-validation';
+import { ScanStatsService } from './scan-stats.service';
 
 /** multer fileFilter: chặn SỚM theo tên/mimetype trước khi buffer cả file vào RAM.
  * Đây chỉ là lớp lọc rẻ tiền đầu tiên — kiểm tra nội dung thật (magic bytes) nằm
@@ -25,12 +26,22 @@ const MAX_UPLOAD_BYTES = 5 * 1024 * 1024; // khớp giới hạn tổng/project 
 
 @Controller('projects')
 export class ProjectController {
-  constructor(private readonly projectService: ProjectService) { }
+  constructor(
+    private readonly projectService: ProjectService,
+    private readonly scanStats: ScanStatsService,
+  ) { }
 
   @Get()
   @UseGuards(JwtAuthGuard)
   async findAll(@Req() req: any) {
     return this.projectService.findAll(req.user.id);
+  }
+
+  /** Thống kê cho dashboard. Phải khai báo TRƯỚC ':id' để 'stats' không bị hiểu là project ID. */
+  @Get('stats')
+  @UseGuards(JwtAuthGuard)
+  async getStats(@Req() req: any) {
+    return this.scanStats.getDashboardStats(req.user.id);
   }
 
   @Get(':id')

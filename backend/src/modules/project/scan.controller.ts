@@ -1,6 +1,9 @@
-import { Controller, Get, Param, ServiceUnavailableException } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Param, Post, ServiceUnavailableException } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { ProjectService } from './project.service';
 import { TriggerDbService } from './trigger-db.service';
+import { ScanStatsService } from './scan-stats.service';
+import { RecordScanDto } from './dto/record-scan.dto';
 
 /**
  * Route PUBLIC — không có JwtAuthGuard.
@@ -9,7 +12,10 @@ import { TriggerDbService } from './trigger-db.service';
  */
 @Controller('public/projects')
 export class ScanController {
-  constructor(private readonly projectService: ProjectService) { }
+  constructor(
+    private readonly projectService: ProjectService,
+    private readonly scanStats: ScanStatsService,
+  ) { }
 
   /** Phải khai báo TRƯỚC ':id' để 'GET /public/projects' không bị nuốt bởi route có param. */
   @Get()
@@ -20,6 +26,14 @@ export class ScanController {
   @Get(':id')
   async getPublishedProject(@Param('id') id: string) {
     return this.projectService.findPublishedForScan(id);
+  }
+
+  /** Mobile gọi khi ảnh trigger được nhận diện và nội dung đã tải xong — đếm 1 lượt quét. */
+  @Post(':id/scans')
+  @HttpCode(200)
+  @Throttle({ default: { limit: 30, ttl: 60_000 } })
+  async recordScan(@Param('id') id: string, @Body() body: RecordScanDto) {
+    return this.scanStats.recordScan(id, body?.deviceId);
   }
 }
 
