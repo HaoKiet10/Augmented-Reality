@@ -21,18 +21,28 @@ interface Props {
 
 const nf = new Intl.NumberFormat();
 
-function ScanTrend({ daily }: { daily: { count: number }[] }) {
-  const w = 300;
-  const h = 64;
+const dayFmt = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', timeZone: 'UTC' });
+
+/** One bar per day. Days without scans keep a faint stub so the 30-day baseline stays visible. */
+function ScanTrend({ daily }: { daily: { date: string; count: number }[] }) {
   const max = Math.max(1, ...daily.map((d) => d.count));
-  const step = daily.length > 1 ? w / (daily.length - 1) : w;
-  const pts = daily.map((d, i) => `${(i * step).toFixed(1)},${(h - 4 - (d.count / max) * (h - 8)).toFixed(1)}`);
-  const line = `M${pts.join(' L')}`;
   return (
-    <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" className="w-full h-16" aria-hidden="true">
-      <path d={`${line} L${w},${h} L0,${h} Z`} className="fill-accent/10" />
-      <path d={line} className="stroke-accent" strokeWidth={2} fill="none" vectorEffect="non-scaling-stroke" />
-    </svg>
+    <div className="flex items-end gap-[3px] h-16" aria-hidden="true">
+      {daily.map((d, i) => {
+        const isToday = i === daily.length - 1;
+        const label = `${dayFmt.format(new Date(`${d.date}T00:00:00Z`))}: ${d.count} scan${d.count === 1 ? '' : 's'}`;
+        return (
+          <div
+            key={d.date}
+            title={label}
+            className={`flex-1 rounded-sm ${
+              d.count === 0 ? 'bg-white/8' : isToday ? 'bg-accent' : 'bg-accent/45'
+            }`}
+            style={{ height: d.count === 0 ? 3 : `${Math.max(8, (d.count / max) * 100)}%` }}
+          />
+        );
+      })}
+    </div>
   );
 }
 
