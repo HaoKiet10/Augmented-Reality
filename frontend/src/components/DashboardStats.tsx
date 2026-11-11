@@ -74,9 +74,9 @@ export const DashboardStats: React.FC<Props> = ({ projects, stats, loading }) =>
   const days = stats?.periodDays ?? 30;
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1.8fr)_minmax(0,1fr)] gap-4 mb-12">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
       {/* Primary: total scans */}
-      <div className="p-6 bg-surface border border-white/6 rounded-2xl flex flex-col">
+      <div className="lg:col-span-2 p-6 bg-surface border border-white/6 rounded-2xl flex flex-col">
         <div className="flex items-center justify-between gap-3">
           <p className="flex items-center gap-2 text-sm text-gray-400">
             <ScanLine size={16} className="text-accent-ink" />
