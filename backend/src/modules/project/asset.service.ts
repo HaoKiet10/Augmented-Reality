@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { imageSize } from 'image-size';
 import { PrismaService } from '../prisma/prisma.service';
-import { StorageService } from './storage.service';
+import { StorageService } from '../storage/storage.service';
 import { ProjectService } from './project.service';
 import { validateUploadedFile, ALLOWED_ASSET_TYPES } from './asset-validation';
 

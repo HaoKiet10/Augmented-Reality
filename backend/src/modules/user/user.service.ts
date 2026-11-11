@@ -1,11 +1,14 @@
-import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
+import { StorageService } from '../storage/storage.service';
+import { ALLOWED_AVATAR_TYPES, validateUploadedFile } from '../project/asset-validation';
 
 @Injectable()
 export class UserService {
     constructor(
         private readonly PrismaService: PrismaService,
+        private readonly storageService: StorageService,
     ) {}
 
     async findById(id: string) {
@@ -120,6 +123,56 @@ export class UserService {
 
         await this.update(id, { password: newPassword });
         return { message: 'Password updated successfully' };
+    }
+
+    /** Đặt mật khẩu lần đầu cho tài khoản Google-only. Chỉ cho phép khi CHƯA có
+     * password — tài khoản đã có password phải đi qua changePassword (bắt buộc
+     * xác nhận mật khẩu cũ), nếu không route này thành đường vòng bỏ qua bước đó. */
+    async setPassword(id: string, newPassword: string) {
+        const user = await this.findById(id);
+        if (!user) {
+            throw new NotFoundException('User not found');
+        }
+        if (user.password) {
+            throw new BadRequestException('This account already has a password. Use change password instead.');
+        }
+
+        await this.update(id, { password: newPassword });
+        return { message: 'Password set successfully' };
+    }
+
+    /** Đổi ảnh đại diện: validate nội dung file thật (không tin mimetype client gửi),
+     * upload, lưu URL mới rồi mới dọn file cũ — nếu upload lỗi thì avatar cũ vẫn nguyên. */
+    async updateAvatar(id: string, file: Express.Multer.File) {
+        validateUploadedFile(file, ALLOWED_AVATAR_TYPES);
+        const user = await this.findById(id);
+        if (!user) {
+            throw new NotFoundException('User not found');
+        }
+
+        const avatarUrl = await this.storageService.uploadAvatar(id, file);
+        const updated = await this.PrismaService.user.update({ where: { id }, data: { avatarUrl } });
+        await this.cleanupOldAvatar(user.avatarUrl);
+        return updated;
+    }
+
+    /** Bỏ ảnh đại diện (về initials). Ảnh Google chỉ bị bỏ link, không đụng storage. */
+    async removeAvatar(id: string) {
+        const user = await this.findById(id);
+        if (!user) {
+            throw new NotFoundException('User not found');
+        }
+
+        const updated = await this.PrismaService.user.update({ where: { id }, data: { avatarUrl: null } });
+        await this.cleanupOldAvatar(user.avatarUrl);
+        return updated;
+    }
+
+    private async cleanupOldAvatar(oldUrl: string | null) {
+        const key = this.storageService.avatarKeyFromUrl(oldUrl);
+        if (key) {
+            await this.storageService.deleteAvatar(key);
+        }
     }
 
     /** Bỏ field password (hash) trước khi trả user object ra response — không bao giờ

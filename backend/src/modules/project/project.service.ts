@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { StorageService } from './storage.service';
+import { StorageService } from '../storage/storage.service';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { validateUploadedFile, ALLOWED_TRIGGER_IMAGE_TYPES } from './asset-validation';
 import { TriggerDbService, MAX_SCAN_TRIGGERS } from './trigger-db.service';

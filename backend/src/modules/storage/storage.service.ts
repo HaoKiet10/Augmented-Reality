@@ -2,6 +2,7 @@ import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import * as path from 'path';
 import WebSocket from 'ws';
+import { avatarKeyFromUrl } from './avatar-url';
 
 @Injectable()
 export class StorageService {
@@ -133,6 +134,43 @@ export class StorageService {
       throw new Error(`Failed to generate public URL for ${storageKey}`);
     }
     return urlData.publicUrl;
+  }
+
+  /** Bucket riêng cho avatar: public read, giới hạn size/mime đặt ở chính bucket trên Supabase. */
+  private get avatarBucket(): string {
+    return process.env.SUPABASE_AVATAR_BUCKET || 'avatars';
+  }
+
+  /** Upload avatar vào `<userId>/<timestamp><ext>` trong bucket avatar, trả về public URL. */
+  async uploadAvatar(userId: string, file: Express.Multer.File): Promise<string> {
+    const storageKey = `${userId}/${Date.now()}${path.extname(file.originalname).toLowerCase()}`;
+    const { error } = await this.supabase.storage
+      .from(this.avatarBucket)
+      .upload(storageKey, file.buffer, { contentType: file.mimetype, upsert: false });
+
+    if (error) {
+      this.logger.error(`Supabase avatar upload error: ${error.message}`);
+      throw new BadRequestException(`Avatar upload failed: ${error.message}`);
+    }
+
+    const { data: urlData } = this.supabase.storage.from(this.avatarBucket).getPublicUrl(storageKey);
+    if (!urlData?.publicUrl) {
+      throw new BadRequestException('Failed to generate public URL for avatar');
+    }
+    return urlData.publicUrl;
+  }
+
+  /** storageKey nếu URL là avatar do mình upload, null với ảnh Google/URL lạ. */
+  avatarKeyFromUrl(url: string | null | undefined): string | null {
+    return avatarKeyFromUrl(url, process.env.SUPABASE_URL!, this.avatarBucket);
+  }
+
+  /** Xoá file avatar cũ. Lỗi chỉ log — avatar mới đã lưu xong, file mồ côi không đáng làm fail request. */
+  async deleteAvatar(storageKey: string): Promise<void> {
+    const { error } = await this.supabase.storage.from(this.avatarBucket).remove([storageKey]);
+    if (error) {
+      this.logger.error(`Failed to delete old avatar (${storageKey}): ${error.message}`);
+    }
   }
 
   async deleteFile(storageKey: string): Promise<void> {

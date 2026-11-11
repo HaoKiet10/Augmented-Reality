@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { ProjectService } from './project.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { StorageService } from './storage.service';
+import { StorageService } from '../storage/storage.service';
 import { TriggerDbService } from './trigger-db.service';
 
 describe('ProjectService', () => {

@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LogOut, User as UserIcon, Plus, Folder, Calendar, Trash2, ExternalLink } from 'lucide-react';
+import { LogOut, Plus, Folder, Calendar, Trash2, ExternalLink } from 'lucide-react';
 import type { Project } from '../pages/ProjectEditor/types';
 import { API_URL } from '../config';
 import { AnchorFrame, BrandWordmark } from '../components/Brand';
-import { StatusPill } from '../components/ui';
+import { Avatar, StatusPill } from '../components/ui';
 import { DashboardStats, type DashboardStatsData } from '../components/DashboardStats';
 
 
@@ -147,7 +147,7 @@ export const Dashboard: React.FC = () => {
 
           <div className="flex items-center gap-6">
             <Link to="/profile" title="Edit profile" className="flex items-center gap-2 text-sm text-gray-300 hover:text-white transition-colors">
-              <UserIcon size={16} className="text-gray-400" />
+              <Avatar url={user?.avatarUrl} name={user?.name} email={user?.email} size="sm" />
               <span>{user?.name || user?.email}</span>
               {user?.role && (
                 <span className="px-2 py-0.5 text-xs font-semibold bg-white/5 text-gray-300 border border-white/10 rounded-full">

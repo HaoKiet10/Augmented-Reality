@@ -3,6 +3,7 @@ import {
   validateUploadedFile,
   ALLOWED_ASSET_TYPES,
   ALLOWED_TRIGGER_IMAGE_TYPES,
+  ALLOWED_AVATAR_TYPES,
 } from './asset-validation';
 
 const PNG_MAGIC = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
@@ -126,5 +127,34 @@ describe('validateUploadedFile', () => {
 
       expect(() => validateUploadedFile(file, ALLOWED_TRIGGER_IMAGE_TYPES)).not.toThrow();
     });
+  });
+});
+
+describe('ALLOWED_AVATAR_TYPES', () => {
+  const WEBP_MAGIC = Buffer.concat([Buffer.from('RIFF', 'ascii'), Buffer.alloc(4), Buffer.from('WEBP', 'ascii')]);
+
+  it('nhận ảnh .webp có chữ ký RIFF....WEBP thật', () => {
+    const file = makeFile({ originalname: 'me.webp', mimetype: 'image/webp', buffer: WEBP_MAGIC });
+
+    expect(() => validateUploadedFile(file, ALLOWED_AVATAR_TYPES)).not.toThrow();
+  });
+
+  it('từ chối .webp mà nội dung không phải WebP (vd RIFF của file .wav)', () => {
+    const wav = Buffer.concat([Buffer.from('RIFF', 'ascii'), Buffer.alloc(4), Buffer.from('WAVE', 'ascii')]);
+    const file = makeFile({ originalname: 'me.webp', mimetype: 'image/webp', buffer: wav });
+
+    expect(() => validateUploadedFile(file, ALLOWED_AVATAR_TYPES)).toThrow(BadRequestException);
+  });
+
+  it('nhận png và jpg', () => {
+    expect(() => validateUploadedFile(makeFile(), ALLOWED_AVATAR_TYPES)).not.toThrow();
+    const jpg = makeFile({ originalname: 'me.jpg', mimetype: 'image/jpeg', buffer: JPEG_MAGIC });
+    expect(() => validateUploadedFile(jpg, ALLOWED_AVATAR_TYPES)).not.toThrow();
+  });
+
+  it('từ chối video/model làm avatar', () => {
+    const glb = makeFile({ originalname: 'm.glb', mimetype: 'model/gltf-binary', buffer: GLB_MAGIC });
+
+    expect(() => validateUploadedFile(glb, ALLOWED_AVATAR_TYPES)).toThrow(BadRequestException);
   });
 });

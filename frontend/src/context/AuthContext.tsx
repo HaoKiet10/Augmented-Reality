@@ -9,6 +9,7 @@ export interface User {
   avatarUrl?: string | null;
   hasPassword?: boolean;
   hasGoogle?: boolean;
+  createdAt?: string;
 }
 
 /** Backend giới hạn 5 lần/phút cho các route auth — trả 429 với message kỹ thuật,

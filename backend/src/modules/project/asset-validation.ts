@@ -52,6 +52,21 @@ export const ALLOWED_TRIGGER_IMAGE_TYPES: Record<string, { mimetypes: string[]; 
   '.jpeg': ALLOWED_ASSET_TYPES['.jpeg'],
 };
 
+/** Ảnh đại diện: ảnh raster thông dụng + WebP. Không nhận SVG (cùng lý do XSS như asset). */
+export const ALLOWED_AVATAR_TYPES: Record<string, { mimetypes: string[]; magic?: (buf: Buffer) => boolean }> = {
+  '.png': ALLOWED_ASSET_TYPES['.png'],
+  '.jpg': ALLOWED_ASSET_TYPES['.jpg'],
+  '.jpeg': ALLOWED_ASSET_TYPES['.jpeg'],
+  '.webp': {
+    mimetypes: ['image/webp'],
+    // RIFF container: "RIFF" + 4 byte size + "WEBP" (WAV/AVI cũng là RIFF nên phải check cả byte 8-12).
+    magic: (buf) =>
+      buf.length >= 12 &&
+      buf.subarray(0, 4).toString('ascii') === 'RIFF' &&
+      buf.subarray(8, 12).toString('ascii') === 'WEBP',
+  },
+};
+
 function getExtension(filename: string): string {
   const idx = filename.lastIndexOf('.');
   return idx === -1 ? '' : filename.slice(idx).toLowerCase();

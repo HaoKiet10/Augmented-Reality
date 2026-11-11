@@ -7,7 +7,7 @@ import * as path from 'path';
 import { promisify } from 'util';
 import sharp from 'sharp';
 import { PrismaService } from '../prisma/prisma.service';
-import { StorageService } from './storage.service';
+import { StorageService } from '../storage/storage.service';
 
 const execFileAsync = promisify(execFile);
 
